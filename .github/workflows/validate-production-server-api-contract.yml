@@ -1,0 +1,55 @@
+name: Validate Codestra production server API contract
+
+on:
+  pull_request:
+    paths:
+      - docs/CODESTRA_PRODUCTION_SERVER_API_CONTRACT.md
+      - .github/workflows/validate-production-server-api-contract.yml
+  push:
+    branches: [development, test, staging, production, main]
+    paths:
+      - docs/CODESTRA_PRODUCTION_SERVER_API_CONTRACT.md
+      - .github/workflows/validate-production-server-api-contract.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: prometheus-production-api-contract-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.13'
+      - name: Validate source-only production contract
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          text = Path('docs/CODESTRA_PRODUCTION_SERVER_API_CONTRACT.md').read_text(encoding='utf-8')
+          required = [
+              'appolon1908-hue/Codestra-Prometheus', '37.27.128.39',
+              'SOURCE_CONTRACT_PREPARED_NOT_DEPLOYED', 'GET` | `/-/ready',
+              'GET` | `/-/healthy', 'GET` | `/metrics', 'GET` | `/api/v1/query',
+              'GET` | `/api/v1/query_range', 'GET` | `/api/v1/rules',
+              'GET` | `/api/v1/alerts', 'ADMIN_MUTATION_METHODS_DENIED=PASS',
+              'POST_OR_PUT_/-/reload=DENIED_401_403_OR_NETWORK',
+              'POST_OR_PUT_/api/v1/admin/tsdb/delete_series=DENIED_401_403_OR_NETWORK',
+              'POST_OR_PUT_/api/v1/admin/tsdb/clean_tombstones=DENIED_401_403_OR_NETWORK',
+              'POST_OR_PUT_/api/v1/admin/tsdb/snapshot=DENIED_401_403_OR_NETWORK',
+              'ADMIN_DENIAL_ACCEPTS_405=NO', 'ADMIN_ENDPOINTS_PUBLIC=NO',
+              'UNEXPECTED_404=0', 'SOURCE_RUNTIME_DRIFT=0',
+              'This document does not deploy Prometheus',
+          ]
+          missing = [value for value in required if value not in text]
+          assert not missing, f'missing production API contract controls: {missing}'
+          forbidden = ['ADMIN_BYPASS_AUTHORIZED=YES', 'SSH_CONFIGURATION_CHANGES_AUTHORIZED=YES', ':latest']
+          present = [value for value in forbidden if value in text]
+          assert not present, f'forbidden production contract claims: {present}'
+          print('CODESTRA_PROMETHEUS_PRODUCTION_API_CONTRACT=PASS')
+          PY

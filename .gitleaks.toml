@@ -1,0 +1,10 @@
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Official upstream documentation and test fixtures excluded from the signed configuration bundle"
+paths = [
+  '''^upstream/(?:docs?|documentation|examples?|web/ui)/''',
+  '''^upstream/.*(?:_test\.go$|\.golden$|/testdata/)''',
+  '''^upstream/scripts/sync_repo_files\.sh$''',
+]

@@ -143,6 +143,20 @@ groups:
           description: "Webhook success ratio is below 95%."
           runbook_url: "https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#slo-fast-burn"
 
+      - alert: CodestraWebhookRetriesElevated
+        expr: codestra:webhook_retries:rate5m > 0.1
+        for: 10m
+        labels:
+          severity: warning
+          owner: codestra-integration
+          codestra_business: "{{ $labels.codestra_business }}"
+          service: "{{ $labels.service }}"
+          environment: "{{ $labels.environment }}"
+        annotations:
+          summary: "Webhook retries elevated for provider {{ $labels.provider }}"
+          description: "Webhook retry rate exceeds 0.1/s for {{ $labels.codestra_business }}/{{ $labels.service }}."
+          runbook_url: "https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#slo-slow-burn"
+
   - name: codestra-operations-dashboard-api
     rules:
       - alert: CodestraOperationsDashboardApiErrors

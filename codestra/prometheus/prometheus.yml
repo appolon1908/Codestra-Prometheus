@@ -51,7 +51,7 @@ scrape_configs:
     label_value_length_limit: 2048
     body_size_limit: 64MB
     file_sd_configs:
-      - files: ["/etc/prometheus/targets/*.json"]
+      - files: ["/etc/prometheus/targets/production.json"]
         refresh_interval: 30s
     relabel_configs:
       - source_labels: [activation]

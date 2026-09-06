@@ -1,0 +1,26 @@
+{
+  "schemaVersion": "1.0.0",
+  "component": "prometheus",
+  "repository": "appolon1908-hue/Codestra-Prometheus",
+  "artifactType": "application/vnd.codestra.prometheus.config.v1+tar",
+  "productionActivation": false,
+  "files": {
+    "codestra/api/service-contract.v1.json": "1fa27e708da2a5afbe5fbff4195ab20543816929ce9e29fa11e33c452c6431e5",
+    "codestra/blackbox/targets-production.json": "5195ce2b978de2e5c4b182bddb580632e71a50771b8604ae1f21a08f35d35995",
+    "codestra/catalog/services.yml": "4c24628c627213082328b45986e329727f67b98b92eab179aee763d50930a73f",
+    "codestra/compose.yaml": "26ac144144e002aa10af9901f8727cceebb2ccd6b4c0f0c32bf9ff677bb13204",
+    "codestra/deploy/compose.staging.yaml": "2352f32e53f6306342588520b8d6ed5d794e1f4f8f8477a46974e145dfedd968",
+    "codestra/prometheus/prometheus-staging.yml": "d232aa01876fa0ccdd12c996ba79625cab7eb1c756ed3114efa349834471c5c6",
+    "codestra/prometheus/prometheus.yml": "46b4da431bf76cb0ec3d758075bf3de8e928b707c290fa08947eefe2088ddfa5",
+    "codestra/prometheus/rules/application-alerts.yml": "19145ec83cad56cb4c9bd3eea497774a85ee5852096dc13b429e5fd4f750dfaf",
+    "codestra/prometheus/rules/infrastructure-alerts.yml": "2d4cb75ab962146f72aa516aaab99fdacb6baffbcf94c1eba50ace98ea3fc6dd",
+    "codestra/prometheus/rules/intake-alerts.yml": "0626ca7d93b5a46be5b223ea8ceedfb7a12970f49e281f242df3f46676e939af",
+    "codestra/prometheus/rules/intake-recording-rules.yml": "91f7af7acdb7762f8bdfb6126ad8c4f594e31750c196f127088923d13e820ba8",
+    "codestra/prometheus/rules/opentelemetry-alerts.yml": "a1c48ae53faea7ebc7d5163e00a34c080ca09e37c683a2c4510b48d2145f5062",
+    "codestra/prometheus/rules/recording-rules.yml": "94e8f60084d0e8283fb7d5f4b018eb29d5f20517963848813f269b013952f414",
+    "codestra/prometheus/rules/security-alerts.yml": "12c2fe386a26a1e81f14d12cdcbe27b77e38b5bb89886780b601b76bc0d17195",
+    "codestra/prometheus/rules/slo-rules.yml": "4d03fe8de645a933a00a20c71bc0b02fbcc130580ff1749dbcf07aa1468c0ffb",
+    "codestra/prometheus/targets/production.json": "356760e634710c6e3524a12189e91719dd84913dda7374de544734dabdbc2fbb",
+    "codestra/prometheus/targets/staging.json": "a556fabd56a4ce932a83f8fc130e7b0bd13430a21fa58f6e128e0ae3e1099a2c"
+  }
+}

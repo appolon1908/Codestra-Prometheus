@@ -2,7 +2,7 @@ name: codestra-prometheus-authority
 
 services:
   prometheus:
-    image: ${PROMETHEUS_IMAGE_REPOSITORY:?PROMETHEUS_IMAGE_REPOSITORY is required}@sha256:${PROMETHEUS_IMAGE_DIGEST:?PROMETHEUS_IMAGE_DIGEST must be a 64-character lowercase hexadecimal digest}
+    image: docker.io/prom/prometheus@sha256:63805ebb8d2b3920190daf1cb14a60871b16fd38bed42b857a3182bc621f4996
     restart: unless-stopped
     user: "65534:65534"
     read_only: true
@@ -11,6 +11,9 @@ services:
     security_opt:
       - no-new-privileges:true
     pids_limit: 256
+    environment:
+      CODESTRA_SOURCE_SHA: ${CODESTRA_SOURCE_SHA:?required protected source SHA}
+      CODESTRA_IMAGE_DIGEST: sha256:63805ebb8d2b3920190daf1cb14a60871b16fd38bed42b857a3182bc621f4996
     command:
       - --config.file=/etc/prometheus/prometheus.yml
       - --storage.tsdb.path=/prometheus
@@ -42,58 +45,10 @@ services:
       retries: 5
       start_period: 20s
 
-  # Exporter source/configuration authority: appolon1908-hue/Codestra-Postgres-Exporter.
-  # This Compose entry is integration wiring only and must consume an accepted immutable artifact.
-  postgres-exporter:
-    image: ${POSTGRES_EXPORTER_IMAGE_REPOSITORY:?POSTGRES_EXPORTER_IMAGE_REPOSITORY is required}@sha256:${POSTGRES_EXPORTER_IMAGE_DIGEST:?POSTGRES_EXPORTER_IMAGE_DIGEST must be a 64-character lowercase hexadecimal digest}
-    restart: unless-stopped
-    user: "65534:65534"
-    read_only: true
-    cap_drop:
-      - ALL
-    security_opt:
-      - no-new-privileges:true
-    pids_limit: 128
-    environment:
-      DATA_SOURCE_URI_FILE: /run/secrets/postgres_exporter_uri
-      DATA_SOURCE_USER_FILE: /run/secrets/postgres_exporter_user
-      DATA_SOURCE_PASS_FILE: /run/secrets/postgres_exporter_password
-    expose:
-      - "9187"
-    secrets:
-      - postgres_exporter_uri
-      - postgres_exporter_user
-      - postgres_exporter_password
-    networks:
-      observability:
-        aliases:
-          - postgres-exporter
-      database: {}
-    healthcheck:
-      test: ["CMD", "/bin/postgres_exporter", "--version"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
-
 networks:
   observability:
     external: true
     name: ${CODESTRA_OBSERVABILITY_NETWORK:-codestra-observability}
-  database:
-    external: true
-    name: ${CODESTRA_DATABASE_NETWORK:-codestra-database}
 
 volumes:
   prometheus_data:
-
-secrets:
-  postgres_exporter_uri:
-    external: true
-    name: ${POSTGRES_EXPORTER_URI_SECRET:-codestra-postgres-exporter-uri}
-  postgres_exporter_user:
-    external: true
-    name: ${POSTGRES_EXPORTER_USER_SECRET:-codestra-postgres-exporter-user}
-  postgres_exporter_password:
-    external: true
-    name: ${POSTGRES_EXPORTER_PASSWORD_SECRET:-codestra-postgres-exporter-password}

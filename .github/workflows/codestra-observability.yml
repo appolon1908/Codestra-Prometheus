@@ -4,16 +4,24 @@ on:
   pull_request:
     paths:
       - "codestra/**"
+      - "CODESTRA_UPSTREAM.json"
+      - "CODESTRA_UPSTREAM_LOCK.json"
+      - "upstream/**"
+      - "scripts/validate_source_authority.py"
       - ".github/workflows/codestra-observability.yml"
-      - "upstream/go.mod"
-      - "upstream/go.sum"
+      - ".github/workflows/upstream-source-sync.yml"
+      - ".github/workflows/validate-codestra-corporate-runtime-v1.yml"
   push:
     branches: [development, test, staging, production, main]
     paths:
       - "codestra/**"
+      - "CODESTRA_UPSTREAM.json"
+      - "CODESTRA_UPSTREAM_LOCK.json"
+      - "upstream/**"
+      - "scripts/validate_source_authority.py"
       - ".github/workflows/codestra-observability.yml"
-      - "upstream/go.mod"
-      - "upstream/go.sum"
+      - ".github/workflows/upstream-source-sync.yml"
+      - ".github/workflows/validate-codestra-corporate-runtime-v1.yml"
 
 permissions:
   contents: read
@@ -29,22 +37,28 @@ jobs:
     env:
       PROMETHEUS_IMAGE_REPOSITORY: prom/prometheus
       PROMETHEUS_IMAGE_DIGEST: '0000000000000000000000000000000000000000000000000000000000000000'
-      POSTGRES_EXPORTER_IMAGE_REPOSITORY: prometheuscommunity/postgres-exporter
-      POSTGRES_EXPORTER_IMAGE_DIGEST: '1111111111111111111111111111111111111111111111111111111111111111'
+      CODESTRA_SOURCE_SHA: '0000000000000000000000000000000000000000'
       PROMETHEUS_RETENTION_TIME: 30d
       PROMETHEUS_RETENTION_SIZE: 40GB
       PROMETHEUS_LISTEN_ADDRESS: 127.0.0.1:9090
       CODESTRA_OBSERVABILITY_NETWORK: codestra-observability
-      CODESTRA_DATABASE_NETWORK: codestra-database
-      POSTGRES_EXPORTER_URI_SECRET: codestra-postgres-exporter-uri
-      POSTGRES_EXPORTER_USER_SECRET: codestra-postgres-exporter-user
-      POSTGRES_EXPORTER_PASSWORD_SECRET: codestra-postgres-exporter-password
     steps:
       - name: Check out exact head
-        uses: actions/checkout@v4
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Prove exact source identity
+        env:
+          EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD_SHA"
+          test -z "$(git status --porcelain)"
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
           python-version: "3.13"
 
@@ -57,16 +71,35 @@ jobs:
         run: |
           python -m py_compile \
             codestra/scripts/validate.py \
-            codestra/scripts/validate_runtime_images.py
+            codestra/scripts/validate_runtime_images.py \
+            codestra/scripts/validate_staging_runtime_compose.py \
+            codestra/scripts/deploy_staging_runtime.py \
+            scripts/validate_source_authority.py
+          python scripts/validate_source_authority.py
           python codestra/scripts/validate.py
           python codestra/scripts/validate_runtime_images.py
+          python codestra/scripts/validate_staging_runtime_compose.py
+
+      - name: Render dedicated staging runtime authority
+        env:
+          PROMETHEUS_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          MIDDLEWARE_METRICS_CLIENT_SECRET_FILE: /tmp/not-read-during-compose-render
+        run: |
+          python codestra/scripts/deploy_staging_runtime.py \
+            --mode render \
+            --source-sha "$PROMETHEUS_SOURCE_SHA" \
+            --secret-file /tmp/not-read-during-compose-render
+          docker compose \
+            -f codestra/deploy/compose.staging.yaml \
+            config > /tmp/codestra-prometheus-staging.yaml
+          grep -F 'prom/prometheus:v3.5.0@sha256:63805ebb8d2b3920190daf1cb14a60871b16fd38bed42b857a3182bc621f4996' /tmp/codestra-prometheus-staging.yaml
+          ! grep -Eq 'privileged: true|seccomp.*unconfined|host_ip:|published:' /tmp/codestra-prometheus-staging.yaml
 
       - name: Render hardened runtime candidate
         run: |
           docker compose -f codestra/compose.yaml config > /tmp/codestra-prometheus-compose.yaml
           test -s /tmp/codestra-prometheus-compose.yaml
-          grep -Eq 'image:[[:space:]]+prom/prometheus@sha256:[0-9a-f]{64}' /tmp/codestra-prometheus-compose.yaml
-          grep -Eq 'image:[[:space:]]+prometheuscommunity/postgres-exporter@sha256:[0-9a-f]{64}' /tmp/codestra-prometheus-compose.yaml
+          grep -F 'image: docker.io/prom/prometheus@sha256:63805ebb8d2b3920190daf1cb14a60871b16fd38bed42b857a3182bc621f4996' /tmp/codestra-prometheus-compose.yaml
           grep -Eq 'host_ip:[[:space:]]*127\.0\.0\.1' /tmp/codestra-prometheus-compose.yaml
           ! grep -Eq ':latest([[:space:]]|$)|host_ip:[[:space:]]*(0\.0\.0\.0|::)' /tmp/codestra-prometheus-compose.yaml
 
@@ -74,32 +107,69 @@ jobs:
         run: |
           ! env PROMETHEUS_IMAGE_REPOSITORY=prom/prometheus:latest \
             PROMETHEUS_IMAGE_DIGEST="$PROMETHEUS_IMAGE_DIGEST" \
-            POSTGRES_EXPORTER_IMAGE_REPOSITORY="$POSTGRES_EXPORTER_IMAGE_REPOSITORY" \
-            POSTGRES_EXPORTER_IMAGE_DIGEST="$POSTGRES_EXPORTER_IMAGE_DIGEST" \
             python codestra/scripts/validate_runtime_images.py
           ! env PROMETHEUS_IMAGE_REPOSITORY="$PROMETHEUS_IMAGE_REPOSITORY" \
             PROMETHEUS_IMAGE_DIGEST=latest \
-            POSTGRES_EXPORTER_IMAGE_REPOSITORY="$POSTGRES_EXPORTER_IMAGE_REPOSITORY" \
-            POSTGRES_EXPORTER_IMAGE_DIGEST="$POSTGRES_EXPORTER_IMAGE_DIGEST" \
             python codestra/scripts/validate_runtime_images.py
 
-      - name: Set up Go from locked upstream source
-        uses: actions/setup-go@v6
-        with:
-          go-version-file: upstream/go.mod
-          cache-dependency-path: upstream/go.sum
-
-      - name: Build pinned upstream promtool
-        working-directory: upstream
+      - name: Validate Prometheus production configuration with exact runtime promtool
         run: |
-          mkdir -p ../.bin
-          go build -trimpath -o ../.bin/promtool ./cmd/promtool
+          docker run --rm --platform linux/amd64 \
+            --network none \
+            --read-only \
+            --cap-drop ALL \
+            --security-opt no-new-privileges:true \
+            --entrypoint /bin/promtool \
+            --workdir /workspace \
+            --volume "$PWD:/workspace:ro" \
+            --volume "$PWD/codestra/prometheus/targets:/etc/prometheus/targets:ro" \
+            --volume "$PWD/codestra/prometheus/rules:/etc/prometheus/rules:ro" \
+            --volume "$PWD/codestra/blackbox/targets-production.json:/etc/prometheus/blackbox-targets/production.json:ro" \
+            docker.io/prom/prometheus@sha256:63805ebb8d2b3920190daf1cb14a60871b16fd38bed42b857a3182bc621f4996 \
+            check config codestra/prometheus/prometheus.yml
 
-      - name: Validate Prometheus configuration
-        run: .bin/promtool check config codestra/prometheus/prometheus.yml
+      - name: Validate staging Prometheus configuration with exact runtime promtool
+        run: |
+          docker run --rm --platform linux/amd64 \
+            --network none \
+            --read-only \
+            --cap-drop ALL \
+            --security-opt no-new-privileges:true \
+            --entrypoint /bin/promtool \
+            --workdir /workspace \
+            --volume "$PWD:/workspace:ro" \
+            --volume "$PWD/codestra/prometheus/targets:/etc/prometheus/targets:ro" \
+            --volume "$PWD/codestra/prometheus/rules/intake-recording-rules.yml:/etc/prometheus/rules-staging/intake-recording-rules.yml:ro" \
+            --volume "$PWD/codestra/prometheus/rules/intake-alerts.yml:/etc/prometheus/rules-staging/intake-alerts.yml:ro" \
+            docker.io/prom/prometheus@sha256:63805ebb8d2b3920190daf1cb14a60871b16fd38bed42b857a3182bc621f4996 \
+            check config codestra/prometheus/prometheus-staging.yml
 
-      - name: Validate Prometheus rules
-        run: .bin/promtool check rules codestra/prometheus/rules/*.yml
+      - name: Validate Prometheus rules with exact runtime promtool
+        run: |
+          docker run --rm --platform linux/amd64 \
+            --network none \
+            --read-only \
+            --cap-drop ALL \
+            --security-opt no-new-privileges:true \
+            --entrypoint /bin/promtool \
+            --workdir /workspace \
+            --volume "$PWD:/workspace:ro" \
+            docker.io/prom/prometheus@sha256:63805ebb8d2b3920190daf1cb14a60871b16fd38bed42b857a3182bc621f4996 \
+            check rules codestra/prometheus/rules/*.yml
+
+      - name: Execute Stage 6 alert evaluations with exact runtime promtool
+        run: |
+          docker run --rm --platform linux/amd64 \
+            --network none \
+            --read-only \
+            --tmpfs /tmp:rw,noexec,nosuid,nodev,size=64m \
+            --cap-drop ALL \
+            --security-opt no-new-privileges:true \
+            --entrypoint /bin/promtool \
+            --workdir /workspace \
+            --volume "$PWD:/workspace:ro" \
+            docker.io/prom/prometheus@sha256:63805ebb8d2b3920190daf1cb14a60871b16fd38bed42b857a3182bc621f4996 \
+            test rules codestra/prometheus/tests/*.test.yml
 
       - name: Confirm source-only safety state
         run: |

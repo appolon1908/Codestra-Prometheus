@@ -1,0 +1,75 @@
+name: Validate Prometheus repository readiness
+on: [pull_request]
+permissions: {contents: read}
+jobs:
+  validate-source:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    env:
+      PROMETHEUS_IMAGE_REPOSITORY: prom/prometheus
+      PROMETHEUS_IMAGE_DIGEST: 63805ebb8d2b3920190daf1cb14a60871b16fd38bed42b857a3182bc621f4996
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with: {ref: "${{ github.event.pull_request.head.sha }}", fetch-depth: 0, persist-credentials: false}
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with: {python-version: "3.13"}
+      - name: Validate evidence workflow semantics
+        run: |
+          docker run --rm --platform linux/amd64 \
+            --volume "$PWD:/repo:ro" --workdir /repo \
+            rhysd/actionlint@sha256:1d74bfc9fd1963af8f89a7c22afaaafd42f49aad711a09951d02cb996398f61d \
+            -config-file .github/actionlint.yaml \
+            .github/workflows/collect-staging-intake-evidence.yml \
+            .github/workflows/controlled-intake-staging-activation-gate.yml
+      - name: Validate exact source and deterministic bundle
+        env: {HEAD_SHA: "${{ github.event.pull_request.head.sha }}", BASE_SHA: "${{ github.event.pull_request.base.sha }}"}
+        run: |
+          test "$(git rev-parse HEAD)" = "$HEAD_SHA"
+          python3 -m pip install --disable-pip-version-check --no-cache-dir -r requirements-validation.txt
+          python3 codestra/scripts/validate.py
+          python3 codestra/scripts/validate_runtime_images.py
+          python3 scripts/validate_repository_readiness.py
+          python3 -m unittest discover -s tests -p 'test_*.py'
+          python3 scripts/build_config_bundle.py --output /tmp/prometheus-config.tar.gz
+          CODESTRA_SOURCE_SHA="$HEAD_SHA" docker compose --file codestra/compose.yaml config >/dev/null
+          git diff --check "$BASE_SHA" "$HEAD_SHA"
+      - name: Scan changed and governed source with redacted output
+        env: {HEAD_SHA: "${{ github.event.pull_request.head.sha }}", BASE_SHA: "${{ github.event.pull_request.base.sha }}"}
+        run: |
+          archive="${RUNNER_TEMP}/gitleaks.tar.gz"
+          curl --fail --silent --show-error --location https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz --output "$archive"
+          echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  $archive" | sha256sum --check -
+          tar -xzf "$archive" -C "$RUNNER_TEMP" gitleaks
+          "$RUNNER_TEMP/gitleaks" git --no-banner --redact=100 --exit-code 1 --log-opts="${BASE_SHA}..${HEAD_SHA}" .
+          "$RUNNER_TEMP/gitleaks" dir --no-banner --redact=100 --exit-code 1 .
+      - name: Validate exact locked runtime at PR head
+        env: {HEAD_SHA: "${{ github.event.pull_request.head.sha }}"}
+        run: bash scripts/validate_locked_runtime.sh "$HEAD_SHA"
+  validate-merge-result:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    env:
+      PROMETHEUS_IMAGE_REPOSITORY: prom/prometheus
+      PROMETHEUS_IMAGE_DIGEST: 63805ebb8d2b3920190daf1cb14a60871b16fd38bed42b857a3182bc621f4996
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with: {python-version: "3.13"}
+      - name: Validate evidence workflow semantics
+        run: |
+          docker run --rm --platform linux/amd64 \
+            --volume "$PWD:/repo:ro" --workdir /repo \
+            rhysd/actionlint@sha256:1d74bfc9fd1963af8f89a7c22afaaafd42f49aad711a09951d02cb996398f61d \
+            -config-file .github/actionlint.yaml \
+            .github/workflows/collect-staging-intake-evidence.yml \
+            .github/workflows/controlled-intake-staging-activation-gate.yml
+      - run: |
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          python3 -m pip install --disable-pip-version-check --no-cache-dir -r requirements-validation.txt
+          python3 codestra/scripts/validate.py
+          python3 codestra/scripts/validate_runtime_images.py
+          python3 scripts/validate_repository_readiness.py
+          python3 -m unittest discover -s tests -p 'test_*.py'
+      - name: Validate exact locked runtime at synthetic merge
+        run: bash scripts/validate_locked_runtime.sh "$GITHUB_SHA"

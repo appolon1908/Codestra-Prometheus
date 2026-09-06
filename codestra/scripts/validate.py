@@ -246,6 +246,11 @@ def validate_targets() -> None:
         ROOT / "prometheus" / "targets" / "production.json",
         REQUIRED_TARGET_LABELS,
     )
+    production_groups = json.loads(
+        (ROOT / "prometheus" / "targets" / "production.json").read_text(encoding="utf-8")
+    )
+    if any(group.get("labels", {}).get("activation") != "pending" for group in production_groups):
+        fail("repository production targets must remain pending before runtime certification")
     missing_services = REQUIRED_SERVICES - services
     if missing_services:
         fail(f"missing required services {sorted(missing_services)}")
@@ -257,6 +262,11 @@ def validate_targets() -> None:
         ROOT / "blackbox" / "targets-production.json",
         blackbox_labels,
     )
+    blackbox_groups = json.loads(
+        (ROOT / "blackbox" / "targets-production.json").read_text(encoding="utf-8")
+    )
+    if any(group.get("labels", {}).get("probe_enabled") != "false" for group in blackbox_groups):
+        fail("repository Blackbox probes must remain disabled before runtime certification")
 
 
 def validate_scrape_config() -> None:
@@ -362,7 +372,7 @@ def validate_runtime() -> None:
         fail("runtime candidate must define services")
     for name, service in services.items():
         image = str(service.get("image", ""))
-        if "${" not in image or "@sha256:" not in image:
+        if not re.fullmatch(r"[a-z0-9./_-]+@sha256:[0-9a-f]{64}", image):
             fail(f"{name} must require an immutable image")
         if service.get("read_only") is not True:
             fail(f"{name} must use a read-only root filesystem")

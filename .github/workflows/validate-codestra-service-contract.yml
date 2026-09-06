@@ -1,0 +1,113 @@
+name: Validate Codestra service API contract
+
+on:
+  pull_request:
+    paths:
+      - 'codestra/api/service-contract.v1.json'
+      - 'docs/CODESTRA-SERVICE-API.md'
+      - '.github/workflows/validate-codestra-service-contract.yml'
+  push:
+    branches: [development, test, staging, production, main, 'feature/**']
+    paths:
+      - 'codestra/api/service-contract.v1.json'
+      - 'docs/CODESTRA-SERVICE-API.md'
+      - '.github/workflows/validate-codestra-service-contract.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: codestra-service-contract-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  canonical-contract-authority:
+    uses: appolon1908-hue/Codestra-Telemetry/.github/workflows/reusable-validate-service-contract.yml@c35d880a730ca5206d445e8a9a688cb465ae2ad4
+    with:
+      expected_repository: 'appolon1908-hue/Codestra-Prometheus'
+      expected_component: 'prometheus'
+      expected_contract_id: 'codestra.observability.prometheus.v1'
+      schema_authority_revision: 'c35d880a730ca5206d445e8a9a688cb465ae2ad4'
+
+  validate-service-contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out exact source head
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.13'
+
+      - name: Validate canonical service API contract
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha || github.sha }}"
+          python - <<'PY'
+          import json
+          import re
+          from pathlib import Path
+
+          if not __debug__:
+              raise SystemExit('contract validation cannot run with Python assertions disabled')
+
+          contract = json.loads(Path('codestra/api/service-contract.v1.json').read_text(encoding='utf-8'))
+          assert contract['schemaVersion'] == '1.0.0'
+          assert contract['component'] == 'prometheus'
+          assert contract['contractId'] == 'codestra.observability.prometheus.v1'
+          assert contract['repository'] == 'appolon1908-hue/Codestra-Prometheus'
+          assert contract['schemaAuthority'] == {
+              'repository': 'appolon1908-hue/Codestra-Telemetry',
+              'path': 'codestra/api/service-contract.schema.json',
+              'sourceRevision': 'c35d880a730ca5206d445e8a9a688cb465ae2ad4',
+              'version': '1.0.0',
+          }
+          assert contract['deploymentClass'] in {'central', 'agent'}
+          assert contract['nativeExposure'] in {'internal_private', 'loopback_edge_only', 'private_strong_auth'}
+          assert re.fullmatch(r'CODESTRA_[A-Z0-9_]+', contract['nativeApi']['baseUrlEnvironment'])
+          operations = {item['id']: item for item in contract['nativeApi']['operations']}
+          assert len(operations) == len(contract['nativeApi']['operations'])
+          required_operations = {
+              ('GET', '/-/healthy'),
+              ('GET', '/-/ready'),
+              ('GET', '/metrics'),
+              ('GET', '/api/v1/query'),
+              ('GET', '/api/v1/query_range'),
+              ('GET', '/api/v1/rules'),
+              ('GET', '/api/v1/alerts'),
+          }
+          assert required_operations <= {
+              (item['method'], item['path']) for item in operations.values()
+          }
+          for operation in operations.values():
+              path = operation['path']
+              assert isinstance(path, str) and path.startswith('/') and not path.startswith('//')
+              assert '\r' not in path and '\n' not in path
+              assert operation['controlPlaneProxyAllowed'] is False
+          for key in ('healthOperationId', 'readinessOperationId'):
+              operation = operations[contract['managementReadback'][key]]
+              assert operation['method'] in {'GET', 'HEAD'}
+              assert operation['access'] == 'read_only'
+              assert operation['responseBodyPolicy'] == 'discard'
+          assert all(item['mutating'] is False for item in contract['integrations'])
+          assert contract['managementReadback']['controlApiOwner'] == 'appolon1908-hue/Codestra-Telemetry'
+          assert contract['managementReadback']['registryServiceId'] == contract['component']
+          assert contract['managementReadback']['responseBodyPolicy'] == 'discard'
+          assert contract['managementReadback']['exposesSecretValues'] is False
+          assert contract['managementReadback']['allowsMutation'] is False
+          assert contract['release']['immutableImageRequired'] is True
+          assert re.fullmatch(r'CODESTRA_[A-Z0-9_]+', contract['release']['sourceRevisionEnvironment'])
+          assert re.fullmatch(r'CODESTRA_[A-Z0-9_]+', contract['release']['imageDigestEnvironment'])
+          assert contract['correlation']['indexedFields'] == [
+              'codestra_business', 'application', 'service', 'environment', 'server', 'region', 'deployment'
+          ]
+          assert {'request_id', 'trace_id', 'tenant_id'} <= set(contract['correlation']['protectedNonIndexedFields'])
+          assert all(value is False for value in contract['safety'].values())
+          serialized = json.dumps(contract, sort_keys=True)
+          assert 'BEGIN PRIVATE KEY' not in serialized
+          assert not re.search(r'AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{20,}', serialized)
+          PY

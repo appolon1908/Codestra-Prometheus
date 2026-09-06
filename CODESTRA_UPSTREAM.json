@@ -1,13 +1,24 @@
 {
-  "schema_version": "1.0",
+  "schema_version": "1.1",
   "component": "prometheus",
   "codestra_repository": "appolon1908-hue/Codestra-Prometheus",
   "upstream_repository": "prometheus/prometheus",
   "upstream_clone_url": "https://github.com/prometheus/prometheus.git",
-  "upstream_ref": "main",
+  "trusted_upstream_ref": "refs/heads/main",
+  "upstream_ref": "e06b2dc5a6149e20ca82fe936fb044a6dfe45958",
+  "upstream_tree": "9f3cc4b95e5d0ea24656c2c237a13aa26aa62f29",
   "import_path": "upstream",
-  "import_mode": "shallow-source-snapshot",
+  "import_mode": "exact-git-tree-reference",
+  "source_role": "NON_RUNTIME_REFERENCE",
+  "runtime_authority": "codestra/release/runtime-image.lock.json",
+  "runtime_validation_image": "docker.io/prom/prometheus@sha256:63805ebb8d2b3920190daf1cb14a60871b16fd38bed42b857a3182bc621f4996",
   "preserve_upstream_license": true,
-  "branches": ["main", "staging", "production"],
+  "branches": [
+    "main",
+    "development",
+    "test",
+    "staging",
+    "production"
+  ],
   "deployment_enabled": false
 }

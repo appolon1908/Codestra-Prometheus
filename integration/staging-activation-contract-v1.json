@@ -71,6 +71,21 @@
       "rollback_proof"
     ]
   },
+  "reviewed_git_activation_evidence": {
+    "schema_version": "1.0",
+    "evidence_type": "REVIEWED_GIT_AUTHORITY",
+    "authority_path": "integration/staging-activation-contract-v1.json",
+    "middleware_source_sha": "f6748a58f8d2590520a4f28776770957061cdea1",
+    "middleware_image_digest": "sha256:695fa3ce3f50ba4d0ae0784976b946a0a683ca731155e4bd3bd9e90a4670b820",
+    "migration": "0003_immutable_event_ledger",
+    "staging_identity": "https://auth-staging.codestra.co",
+    "production_identity_enabled": false,
+    "external_effects_enabled": false,
+    "blackbox_activation": "pending",
+    "production_activation_authorized": false,
+    "scope": "SOURCE_ONLY_ACTIVATION_ELIGIBILITY_NO_RUNTIME_EFFECT",
+    "authority_payload_sha256": "sha256:4097ccc2159c16189c30ddc6028723c6acee279a7f67fd96b7068acbe7b8d836"
+  },
   "activation_policy": {
     "prometheus_target_current_state": "pending",
     "prometheus_target_allowed_next_state": "active",

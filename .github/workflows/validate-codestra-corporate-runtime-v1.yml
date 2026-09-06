@@ -4,7 +4,7 @@ on:
   pull_request:
     paths:
       - "codestra/runtime-v1/**"
-      - "upstream/**"
+      - "codestra/release/runtime-image.lock.json"
       - ".github/workflows/validate-codestra-corporate-runtime-v1.yml"
   push:
     branches:
@@ -15,7 +15,7 @@ on:
       - main
     paths:
       - "codestra/runtime-v1/**"
-      - "upstream/**"
+      - "codestra/release/runtime-image.lock.json"
       - ".github/workflows/validate-codestra-corporate-runtime-v1.yml"
 
 permissions:
@@ -23,22 +23,40 @@ permissions:
 
 jobs:
   validate:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - name: Check out exact head
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with:
-          go-version-file: upstream/go.mod
-          cache-dependency-path: upstream/go.sum
-      - name: Build promtool from the exact vendored Prometheus source
-        working-directory: upstream
-        run: go build -trimpath -o ../.tmp-promtool ./cmd/promtool
-      - name: Validate corporate recording and alert rules
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Validate corporate rules with exact runtime promtool
         run: |
-          ./.tmp-promtool check rules codestra/runtime-v1/codestra-corporate-recording-rules.yml
-          ./.tmp-promtool check rules codestra/runtime-v1/codestra-corporate-alerts.yml
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha || github.sha }}"
+          docker run --rm --platform linux/amd64 \
+            --network none \
+            --read-only \
+            --cap-drop ALL \
+            --security-opt no-new-privileges:true \
+            --entrypoint /bin/promtool \
+            --workdir /workspace \
+            --volume "$PWD:/workspace:ro" \
+            docker.io/prom/prometheus@sha256:63805ebb8d2b3920190daf1cb14a60871b16fd38bed42b857a3182bc621f4996 \
+            check rules \
+            codestra/runtime-v1/codestra-corporate-recording-rules.yml \
+            codestra/runtime-v1/codestra-corporate-alerts.yml
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: "3.13"
+
       - name: Install pinned YAML parser
-        run: python -m pip install --disable-pip-version-check PyYAML==6.0.2
+        run: python -m pip install --disable-pip-version-check --no-cache-dir PyYAML==6.0.3
+
       - name: Validate portfolio, labels, and alert metadata
         shell: python
         run: |

@@ -1,0 +1,88 @@
+rule_files:
+  - ../rules/security-alerts.yml
+  - ../rules/application-alerts.yml
+
+evaluation_interval: 1m
+
+tests:
+  - name: authentication-failures-route-to-warning
+    interval: 1m
+    input_series:
+      - series: 'codestra:authentication_failures:rate5m{codestra_business="codestra",service="middleware-api",environment="staging",reason="invalid_token"}'
+        values: '6 6 6 6 6 6 6 6'
+    alert_rule_test:
+      - eval_time: 6m
+        alertname: CodestraAuthenticationFailuresSpike
+        exp_alerts:
+          - exp_labels:
+              codestra_business: codestra
+              service: middleware-api
+              environment: staging
+              severity: warning
+              owner: codestra-security
+            exp_annotations:
+              summary: 'Authentication failures spiking for codestra/middleware-api'
+              description: 'Authentication failures exceed five per second.'
+              runbook_url: 'https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#slo-fast-burn'
+
+  - name: external-provider-failures-route-to-critical
+    interval: 1m
+    input_series:
+      - series: 'codestra:external_provider_failures:rate5m{codestra_business="codestra",service="middleware-api",environment="staging",provider="odoo",reason="timeout"}'
+        values: '0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3'
+    alert_rule_test:
+      - eval_time: 11m
+        alertname: CodestraExternalProviderFailures
+        exp_alerts:
+          - exp_labels:
+              codestra_business: codestra
+              service: middleware-api
+              environment: staging
+              severity: critical
+              owner: codestra-integration
+            exp_annotations:
+              summary: 'External provider failures elevated'
+              description: 'Provider failure rate exceeds 0.2/s for codestra/middleware-api.'
+              runbook_url: 'https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#slo-fast-burn'
+
+  - name: queue-backlog-route-to-warning
+    interval: 1m
+    input_series:
+      - series: 'codestra:queue_depth:max{codestra_business="codestra",service="middleware-api",environment="staging",queue="outbox"}'
+        values: '1200 1200 1200 1200 1200 1200 1200 1200 1200 1200 1200 1200 1200'
+    alert_rule_test:
+      - eval_time: 11m
+        alertname: CodestraQueueDepthHigh
+        exp_alerts:
+          - exp_labels:
+              codestra_business: codestra
+              service: middleware-api
+              environment: staging
+              queue: outbox
+              severity: warning
+              owner: codestra-application
+            exp_annotations:
+              summary: 'Queue outbox is backing up'
+              description: 'Queue depth is above 1000 for codestra/middleware-api.'
+              runbook_url: 'https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#slo-slow-burn'
+
+  - name: webhook-retries-route-to-warning
+    interval: 1m
+    input_series:
+      - series: 'codestra:webhook_retries:rate5m{codestra_business="codestra",service="middleware-api",environment="staging",provider="odoo"}'
+        values: '0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2'
+    alert_rule_test:
+      - eval_time: 11m
+        alertname: CodestraWebhookRetriesElevated
+        exp_alerts:
+          - exp_labels:
+              codestra_business: codestra
+              service: middleware-api
+              environment: staging
+              provider: odoo
+              severity: warning
+              owner: codestra-integration
+            exp_annotations:
+              summary: 'Webhook retries elevated for provider odoo'
+              description: 'Webhook retry rate exceeds 0.1/s for codestra/middleware-api.'
+              runbook_url: 'https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#slo-slow-burn'

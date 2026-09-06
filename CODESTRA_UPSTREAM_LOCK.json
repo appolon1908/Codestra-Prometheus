@@ -1,9 +1,13 @@
 {
-  "schema_version": "1.0",
+  "schema_version": "1.1",
   "upstream_clone_url": "https://github.com/prometheus/prometheus.git",
-  "upstream_ref": "main",
+  "trusted_upstream_ref": "refs/heads/main",
+  "upstream_ref": "e06b2dc5a6149e20ca82fe936fb044a6dfe45958",
   "upstream_commit": "e06b2dc5a6149e20ca82fe936fb044a6dfe45958",
+  "upstream_tree": "9f3cc4b95e5d0ea24656c2c237a13aa26aa62f29",
   "import_path": "upstream",
-  "synchronized_at": "2026-08-29T17:20:54.760671+00:00",
+  "source_role": "NON_RUNTIME_REFERENCE",
+  "runtime_validation_image": "docker.io/prom/prometheus@sha256:63805ebb8d2b3920190daf1cb14a60871b16fd38bed42b857a3182bc621f4996",
+  "synchronized_at": "2026-08-29T08:13:44Z",
   "deployment_enabled": false
 }
