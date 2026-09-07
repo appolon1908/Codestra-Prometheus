@@ -399,9 +399,133 @@ def validate_secret_safety() -> None:
                 )
 
 
+
+def validate_observability_api_contract() -> None:
+    contract = load_yaml(ROOT / "catalog" / "observability-api-contract.v1.yml")
+    if contract.get("version") != 1:
+        fail("observability API contract version must be 1")
+    if contract.get("status") != "CONFIG_PREPARED_NOT_DEPLOYED":
+        fail("observability API contract must remain fail-closed before runtime evidence")
+    security = contract.get("security", {})
+    if security.get("transport") != "mtls":
+        fail("observability service transport must require mTLS")
+    if security.get("service_identity") != "required":
+        fail("observability service identity must be required")
+    if security.get("public_native_apis") != "forbidden":
+        fail("native observability APIs must remain private")
+
+    services = contract.get("services", {})
+    required = {
+        "prometheus", "alertmanager", "telemetry", "loki", "tempo", "grafana",
+        "alloy", "node_exporter", "cadvisor", "postgres_exporter",
+        "redis_exporter", "blackbox_exporter",
+    }
+    if set(services) != required:
+        fail(f"observability API service set mismatch: {sorted(set(services) ^ required)}")
+
+    expected_authorities = {
+        "prometheus": "appolon1908-hue/Codestra-Prometheus",
+        "alertmanager": "appolon1908-hue/Codestra-Alertmanager",
+        "telemetry": "appolon1908-hue/Codestra-Telemetry",
+        "loki": "appolon1908-hue/Codestra-Loki",
+        "tempo": "appolon1908-hue/Codestra-Tempo",
+        "grafana": "appolon1908-hue/Codestra-Grafana-",
+        "alloy": "appolon1908-hue/Codestra-Alloy",
+        "node_exporter": "appolon1908-hue/Codestra-Node-Exporter",
+        "cadvisor": "appolon1908-hue/Codestra-cAdvisor",
+        "postgres_exporter": "appolon1908-hue/Codestra-Postgres-Exporter",
+        "redis_exporter": "appolon1908-hue/Codestra-Redis-Exporter",
+        "blackbox_exporter": "appolon1908-hue/Codestra-Blackbox-Exporter",
+    }
+    for name, authority in expected_authorities.items():
+        if services[name].get("authority") != authority:
+            fail(f"{name} authority mismatch")
+
+    if services["prometheus"]["alert_delivery"].get("target") != "https://alertmanager:9093/api/v2/alerts":
+        fail("Prometheus must deliver alerts to the Alertmanager v2 API")
+    for name, service in services.items():
+        for key in ("base_url",):
+            value = service.get(key)
+            if value is not None and not str(value).startswith("https://"):
+                fail(f"{name} {key} must use HTTPS for mTLS")
+        for key in ("health", "readiness", "metrics", "application_metrics", "probe"):
+            endpoint = service.get(key, {}).get("endpoint")
+            if endpoint is not None and not str(endpoint).startswith("https://"):
+                fail(f"{name} {key} endpoint must use HTTPS for mTLS")
+
+    metrics_export = services["telemetry"]["exports"]["metrics"]
+    if metrics_export != {
+        "target": "https://otel-collector:8889/metrics",
+        "protocol": "prometheus_scrape",
+        "producer": "telemetry",
+        "consumer": "prometheus",
+    }:
+        fail("Prometheus must scrape the governed telemetry metrics endpoint")
+    if services["telemetry"]["exports"]["logs"].get("target") != "https://loki:3100/otlp":
+        fail("Telemetry must export logs to Loki OTLP")
+    if services["telemetry"]["exports"]["traces"].get("target") != "tempo:4317":
+        fail("Telemetry must export traces to Tempo OTLP/gRPC")
+    if set(services["alloy"].get("exports", [])) != {"telemetry", "loki", "tempo"}:
+        fail("Alloy must export to telemetry, Loki, and Tempo")
+    expected_producers = {
+        ("alertmanager", "alerts"): {"prometheus", "loki"},
+        ("loki", "otlp_logs"): {"telemetry", "alloy"},
+        ("tempo", "otlp_grpc"): {"telemetry", "alloy"},
+        ("tempo", "otlp_http"): {"telemetry", "alloy"},
+    }
+    for (service_name, endpoint_name), producers in expected_producers.items():
+        actual = set(services[service_name][endpoint_name].get("producers", []))
+        if actual != producers:
+            fail(
+                f"{service_name} {endpoint_name} producer relationship mismatch: "
+                f"expected {sorted(producers)}"
+            )
+
+    expected_consumers = {
+        ("prometheus", "query"): {"grafana"},
+        ("alertmanager", "status"): {"grafana"},
+        ("loki", "query"): {"grafana"},
+        ("tempo", "search"): {"grafana"},
+    }
+    for (service_name, endpoint_name), consumers in expected_consumers.items():
+        actual = set(services[service_name][endpoint_name].get("consumers", []))
+        if actual != consumers:
+            fail(
+                f"{service_name} {endpoint_name} consumer relationship mismatch: "
+                f"expected {sorted(consumers)}"
+            )
+
+    exporter_endpoints = {
+        "node_exporter": "metrics",
+        "cadvisor": "metrics",
+        "postgres_exporter": "metrics",
+        "redis_exporter": "metrics",
+        "blackbox_exporter": "probe",
+    }
+    for service_name, endpoint_name in exporter_endpoints.items():
+        consumer = services[service_name][endpoint_name].get("consumer")
+        if consumer != "prometheus":
+            fail(f"{service_name} {endpoint_name} consumer must be prometheus")
+    if set(services["grafana"].get("datasources", [])) != {"prometheus", "loki", "tempo"}:
+        fail("Grafana must use Prometheus, Loki, and Tempo data sources")
+    if services["telemetry"]["application_metrics"].get("activation") != "pending":
+        fail("application telemetry must remain pending until staging evidence passes")
+
+    required_flows = {
+        "prometheus_scrapes_telemetry", "telemetry_to_loki", "telemetry_to_tempo",
+        "alloy_to_loki", "alloy_to_tempo",
+        "prometheus_to_alertmanager", "loki_to_alertmanager",
+        "exporters_to_prometheus", "grafana_to_prometheus",
+        "grafana_to_loki", "grafana_to_tempo",
+    }
+    if set(contract.get("required_flows", [])) != required_flows:
+        fail("observability required-flow set is incomplete")
+
+
 def main() -> int:
     validate_profile()
     validate_catalog()
+    validate_observability_api_contract()
     validate_targets()
     validate_scrape_config()
     validate_rules()
