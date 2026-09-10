@@ -1,0 +1,172 @@
+groups:
+- name: caddy-production-resilience
+  rules:
+  - alert: CaddyServiceDown
+    expr: codestra_caddy_service_up == 0
+    for: 2m
+    labels:
+      severity: critical
+      environment: production
+      service: caddy
+      codestra_business: codestra
+      owner: appolon1908-hue
+    annotations:
+      summary: Caddy service is unavailable
+      description: Caddy service is unavailable. Check the approved runtime and certificate
+        chain; preserve routing and identity controls while investigating.
+      runbook_url: https://github.com/appolon1908-hue/Codestra-Prometheus/blob/development/docs/CORE_CADDY_ALERT_METADATA.md
+  - alert: CaddyConfigurationDrift
+    expr: codestra_caddy_unexpected_drift > 0
+    for: 5m
+    labels:
+      severity: critical
+      environment: production
+      service: caddy
+      codestra_business: codestra
+      owner: appolon1908-hue
+    annotations:
+      summary: Caddy configuration differs from its approved state
+      description: Caddy configuration differs from its approved state. Check the
+        approved runtime and certificate chain; preserve routing and identity controls
+        while investigating.
+      runbook_url: https://github.com/appolon1908-hue/Codestra-Prometheus/blob/development/docs/CORE_CADDY_ALERT_METADATA.md
+  - alert: CaddyBackupStaleWarning
+    expr: codestra_caddy_backup_age_seconds > 86400
+    for: 10m
+    labels:
+      severity: warning
+      environment: production
+      service: caddy
+      codestra_business: codestra
+      owner: appolon1908-hue
+    annotations:
+      summary: Caddy configuration backup is older than one day
+      description: Caddy configuration backup is older than one day. Check the approved
+        runtime and certificate chain; preserve routing and identity controls while
+        investigating.
+      runbook_url: https://github.com/appolon1908-hue/Codestra-Prometheus/blob/development/docs/CORE_CADDY_ALERT_METADATA.md
+  - alert: CaddyBackupStaleCritical
+    expr: codestra_caddy_backup_age_seconds > 172800
+    for: 10m
+    labels:
+      severity: critical
+      environment: production
+      service: caddy
+      codestra_business: codestra
+      owner: appolon1908-hue
+    annotations:
+      summary: Caddy configuration backup is older than two days
+      description: Caddy configuration backup is older than two days. Check the approved
+        runtime and certificate chain; preserve routing and identity controls while
+        investigating.
+      runbook_url: https://github.com/appolon1908-hue/Codestra-Prometheus/blob/development/docs/CORE_CADDY_ALERT_METADATA.md
+  - alert: CaddyPublicBehaviorFailure
+    expr: codestra_caddy_https_expected_response == 0
+    for: 5m
+    labels:
+      severity: critical
+      environment: production
+      service: caddy
+      codestra_business: codestra
+      owner: appolon1908-hue
+    annotations:
+      summary: Caddy public response probe failed
+      description: Caddy public response probe failed. Check the approved runtime
+        and certificate chain; preserve routing and identity controls while investigating.
+      runbook_url: https://github.com/appolon1908-hue/Codestra-Prometheus/blob/development/docs/CORE_CADDY_ALERT_METADATA.md
+  - alert: CaddyKongCanaryFailure
+    expr: codestra_caddy_kong_canary_ok == 0
+    for: 3m
+    labels:
+      severity: critical
+      environment: production
+      service: caddy
+      codestra_business: codestra
+      owner: appolon1908-hue
+    annotations:
+      summary: Caddy to Kong canary failed
+      description: Caddy to Kong canary failed. Check the approved runtime and certificate
+        chain; preserve routing and identity controls while investigating.
+      runbook_url: https://github.com/appolon1908-hue/Codestra-Prometheus/blob/development/docs/CORE_CADDY_ALERT_METADATA.md
+  - alert: CaddyWebSocketCanaryFailure
+    expr: codestra_caddy_websocket_expected_response == 0
+    for: 3m
+    labels:
+      severity: critical
+      environment: production
+      service: caddy
+      codestra_business: codestra
+      owner: appolon1908-hue
+    annotations:
+      summary: Caddy WebSocket canary failed
+      description: Caddy WebSocket canary failed. Check the approved runtime and certificate
+        chain; preserve routing and identity controls while investigating.
+      runbook_url: https://github.com/appolon1908-hue/Codestra-Prometheus/blob/development/docs/CORE_CADDY_ALERT_METADATA.md
+  - alert: CaddyUnexpectedRestart
+    expr: increase(codestra_caddy_restarts_total[15m]) > 0
+    labels:
+      severity: warning
+      environment: production
+      service: caddy
+      codestra_business: codestra
+      owner: appolon1908-hue
+    annotations:
+      summary: Caddy restarted unexpectedly
+      description: Caddy restarted unexpectedly. Check the approved runtime and certificate
+        chain; preserve routing and identity controls while investigating.
+      runbook_url: https://github.com/appolon1908-hue/Codestra-Prometheus/blob/development/docs/CORE_CADDY_ALERT_METADATA.md
+  - alert: CaddyInternalCertificateNearExpiry
+    expr: codestra_caddy_internal_certificate_hours_remaining <= 2
+    for: 5m
+    labels:
+      severity: critical
+      environment: production
+      service: caddy
+      codestra_business: codestra
+      owner: appolon1908-hue
+    annotations:
+      summary: Caddy internal certificate expires within two hours
+      description: Caddy internal certificate expires within two hours. Check the
+        approved runtime and certificate chain; preserve routing and identity controls
+        while investigating.
+      runbook_url: https://github.com/appolon1908-hue/Codestra-Prometheus/blob/development/docs/CORE_CADDY_ALERT_METADATA.md
+  - alert: CaddyCertificateRenewalFailure
+    expr: codestra_caddy_certificate_renewal_errors > 0
+    labels:
+      severity: critical
+      environment: production
+      service: caddy
+      codestra_business: codestra
+      owner: appolon1908-hue
+    annotations:
+      summary: Caddy certificate renewal failed
+      description: Caddy certificate renewal failed. Check the approved runtime and
+        certificate chain; preserve routing and identity controls while investigating.
+      runbook_url: https://github.com/appolon1908-hue/Codestra-Prometheus/blob/development/docs/CORE_CADDY_ALERT_METADATA.md
+  - alert: CaddyReloadFailure
+    expr: codestra_caddy_reload_errors > 0
+    labels:
+      severity: critical
+      environment: production
+      service: caddy
+      codestra_business: codestra
+      owner: appolon1908-hue
+    annotations:
+      summary: Caddy configuration reload failed
+      description: Caddy configuration reload failed. Check the approved runtime and
+        certificate chain; preserve routing and identity controls while investigating.
+      runbook_url: https://github.com/appolon1908-hue/Codestra-Prometheus/blob/development/docs/CORE_CADDY_ALERT_METADATA.md
+  - alert: CaddyMTLSProbeFailure
+    expr: codestra_caddy_mtls_authorized_handshake_ok == 0
+    for: 5m
+    labels:
+      severity: critical
+      environment: production
+      service: caddy
+      codestra_business: codestra
+      owner: appolon1908-hue
+    annotations:
+      summary: Caddy authorized mTLS probe failed
+      description: Caddy authorized mTLS probe failed. Check the approved runtime
+        and certificate chain; preserve routing and identity controls while investigating.
+      runbook_url: https://github.com/appolon1908-hue/Codestra-Prometheus/blob/development/docs/CORE_CADDY_ALERT_METADATA.md
