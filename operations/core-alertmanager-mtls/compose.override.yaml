@@ -1,0 +1,22 @@
+# Pair with Codestra-Alertmanager operations/core-private-transport.
+services:
+  prometheus:
+    volumes:
+      - type: bind
+        source: ${CORE_ALERTMANAGER_CA_FILE:?absolute trusted server CA path required}
+        target: /run/secrets/core-alertmanager-ca
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${CORE_ALERTMANAGER_CLIENT_CERT_FILE:?absolute dedicated client certificate path required}
+        target: /run/secrets/core-alertmanager-client-cert
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${CORE_ALERTMANAGER_CLIENT_KEY_FILE:?absolute dedicated client private key path required}
+        target: /run/secrets/core-alertmanager-client-key
+        read_only: true
+        bind:
+          create_host_path: false
