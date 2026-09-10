@@ -1,0 +1,32 @@
+rule_files:
+- caddy-production.rules.yml
+evaluation_interval: 1m
+tests:
+- interval: 1m
+  input_series:
+  - series: codestra_caddy_mtls_authorized_handshake_ok{target="provider"}
+    values: '0x6'
+  alert_rule_test:
+  - eval_time: 6m
+    alertname: CaddyMTLSProbeFailure
+    exp_alerts:
+    - exp_labels:
+        severity: critical
+        environment: production
+        service: caddy
+        codestra_business: codestra
+        owner: appolon1908-hue
+        target: provider
+      exp_annotations:
+        summary: Caddy authorized mTLS probe failed
+        description: Caddy authorized mTLS probe failed. Check the approved runtime
+          and certificate chain; preserve routing and identity controls while investigating.
+        runbook_url: https://github.com/appolon1908-hue/Codestra-Prometheus/blob/development/docs/CORE_CADDY_ALERT_METADATA.md
+- interval: 1m
+  input_series:
+  - series: codestra_caddy_mtls_authorized_handshake_ok{target="provider"}
+    values: 1x6
+  alert_rule_test:
+  - eval_time: 6m
+    alertname: CaddyMTLSProbeFailure
+    exp_alerts: []
