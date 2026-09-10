@@ -2,10 +2,6 @@ name: Validate Codestra Prometheus corporate runtime v1
 
 on:
   pull_request:
-    paths:
-      - "codestra/runtime-v1/**"
-      - "upstream/**"
-      - ".github/workflows/validate-codestra-corporate-runtime-v1.yml"
   push:
     branches:
       - development
