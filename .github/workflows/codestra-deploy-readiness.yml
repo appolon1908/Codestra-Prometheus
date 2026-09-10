@@ -1,0 +1,37 @@
+name: Codestra deploy readiness
+
+on:
+  pull_request:
+    branches: ["**"]
+  push:
+    branches: ["**"]
+  workflow_dispatch:
+    inputs:
+      operation:
+        required: true
+        type: choice
+        default: verify
+        options: [verify, release, deploy-staging-readonly, certify-staging-readonly, promote-production-readonly]
+      confirmation:
+        required: false
+        type: string
+        default: ""
+      canary_percent:
+        required: false
+        type: string
+        default: "1"
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  deploy-readiness:
+    uses: appolon1908-hue/Infustruction-repo/.github/workflows/reusable-codestra-upstream-deploy-readiness.yml@f509d61a6207c7cd9e5f2562de0c2b32a85b6cca
+    with:
+      repository_class: observability-overlay
+      runtime_deployable: true
+      health_paths: "/-/healthy,/-/ready"
+      operation: ${{ github.event_name == 'workflow_dispatch' && inputs.operation || 'verify' }}
+      confirmation: ${{ github.event_name == 'workflow_dispatch' && inputs.confirmation || '' }}
+      canary_percent: ${{ github.event_name == 'workflow_dispatch' && inputs.canary_percent || '1' }}
