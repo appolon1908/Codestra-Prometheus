@@ -1,5 +1,4 @@
 name: Validate Codestra Prometheus corporate runtime v1
-# Keep the validation workflow in the PR change set so protected-branch checks run on documentation updates.
 
 on:
   pull_request:
