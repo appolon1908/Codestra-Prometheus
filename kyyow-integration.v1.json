@@ -1,0 +1,44 @@
+{
+  "schema": "kyyow.platform-component.v1",
+  "repository": "appolon1908-hue/Codestra-Prometheus",
+  "component": "prometheus",
+  "authority": "metrics",
+  "exposure": "private",
+  "native_ports": [
+    9090
+  ],
+  "inputs": [
+    "alloy:metrics",
+    "exporters:metrics"
+  ],
+  "outputs": [
+    "alertmanager:alerts"
+  ],
+  "controls": [
+    "tenant_id is a resource attribute, never a Prometheus label on shared series",
+    "full_url, email_address, person_name, and social_post labels are prohibited",
+    "rule evaluation may notify Alertmanager only",
+    "native query and admin APIs are not public"
+  ],
+  "identity": {
+    "authority": "appolon1908-hue/Keycloak",
+    "workload_identity_required": true,
+    "anonymous_admin_access": false
+  },
+  "secrets": {
+    "authority": "appolon1908-hue/Codestra-OpenBao",
+    "secrets_in_git": false,
+    "environment_plaintext_secrets": false
+  },
+  "operations": {
+    "middleware_is_sole_odoo_writer": true,
+    "grafana_read_only": true,
+    "superset_read_only": true
+  },
+  "activation": {
+    "source_contract_complete": true,
+    "runtime_evidence_complete": false,
+    "production_activation_authorized": false
+  }
+}
+
