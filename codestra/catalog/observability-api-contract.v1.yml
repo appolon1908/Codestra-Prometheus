@@ -1,0 +1,94 @@
+version: 1
+status: CONFIG_PREPARED_NOT_DEPLOYED
+network: private_observability
+security:
+  transport: mtls
+  service_identity: required
+  public_native_apis: forbidden
+  browser_access: gateway_sso_only
+  secrets_in_repository: forbidden
+
+services:
+  prometheus:
+    authority: appolon1908-hue/Codestra-Prometheus
+    base_url: https://prometheus:9090
+    health: {method: GET, path: /-/healthy}
+    readiness: {method: GET, path: /-/ready}
+    metrics: {method: GET, path: /metrics}
+    query: {method: POST, path: /api/v1/query, consumers: [grafana]}
+    alert_delivery: {method: POST, target: https://alertmanager:9093/api/v2/alerts}
+  alertmanager:
+    authority: appolon1908-hue/Codestra-Alertmanager
+    base_url: https://alertmanager:9093
+    health: {method: GET, path: /-/healthy}
+    readiness: {method: GET, path: /-/ready}
+    metrics: {method: GET, path: /metrics}
+    alerts: {method: POST, path: /api/v2/alerts, producers: [prometheus, loki]}
+    status: {method: GET, path: /api/v2/status, consumers: [grafana]}
+  telemetry:
+    authority: appolon1908-hue/Codestra-Telemetry
+    grpc_ingest: {protocol: otlp_grpc, endpoint: "otel-collector:4317", tls: required}
+    http_ingest: {protocol: otlp_http, endpoint: "https://otel-collector:4318", paths: [/v1/metrics, /v1/logs, /v1/traces], tls: required}
+    health: {method: GET, endpoint: "https://otel-collector:13133/"}
+    metrics: {method: GET, endpoint: "https://otel-collector:8888/metrics"}
+    application_metrics: {method: GET, endpoint: "https://otel-collector:8889/metrics", activation: pending}
+    exports:
+      metrics: {target: "https://otel-collector:8889/metrics", protocol: prometheus_scrape, producer: telemetry, consumer: prometheus}
+      logs: {target: "https://loki:3100/otlp", protocol: otlp_http, tls: required}
+      traces: {target: "tempo:4317", protocol: otlp_grpc, tls: required}
+  loki:
+    authority: appolon1908-hue/Codestra-Loki
+    base_url: https://loki:3100
+    readiness: {method: GET, path: /ready}
+    metrics: {method: GET, path: /metrics}
+    otlp_logs: {method: POST, path: /otlp/v1/logs, producers: [telemetry, alloy]}
+    query: {method: GET, path: /loki/api/v1/query_range, consumers: [grafana]}
+  tempo:
+    authority: appolon1908-hue/Codestra-Tempo
+    base_url: https://tempo:3200
+    readiness: {method: GET, path: /ready}
+    metrics: {method: GET, path: /metrics}
+    otlp_grpc: {protocol: otlp_grpc, endpoint: "tempo:4317", producers: [telemetry, alloy], tls: required}
+    otlp_http: {method: POST, endpoint: "https://tempo:4318/v1/traces", producers: [telemetry, alloy], tls: required}
+    search: {method: GET, path: /api/search, consumers: [grafana]}
+  grafana:
+    authority: appolon1908-hue/Codestra-Grafana-
+    base_url: https://grafana:3000
+    health: {method: GET, path: /api/health}
+    metrics: {method: GET, path: /metrics}
+    datasources: [prometheus, loki, tempo]
+    browser_access: gateway_sso_only
+  alloy:
+    authority: appolon1908-hue/Codestra-Alloy
+    base_url: https://alloy:12345
+    readiness: {method: GET, path: /-/ready}
+    metrics: {method: GET, path: /metrics}
+    exports: [telemetry, loki, tempo]
+  node_exporter:
+    authority: appolon1908-hue/Codestra-Node-Exporter
+    metrics: {method: GET, endpoint: "https://private-host:9100/metrics", consumer: prometheus}
+  cadvisor:
+    authority: appolon1908-hue/Codestra-cAdvisor
+    metrics: {method: GET, endpoint: "https://private-host:8080/metrics", consumer: prometheus}
+  postgres_exporter:
+    authority: appolon1908-hue/Codestra-Postgres-Exporter
+    metrics: {method: GET, endpoint: "https://postgres-exporter:9187/metrics", consumer: prometheus}
+  redis_exporter:
+    authority: appolon1908-hue/Codestra-Redis-Exporter
+    metrics: {method: GET, endpoint: "https://redis-exporter:9121/metrics", consumer: prometheus}
+  blackbox_exporter:
+    authority: appolon1908-hue/Codestra-Blackbox-Exporter
+    probe: {method: GET, endpoint: "https://blackbox-exporter:9115/probe", consumer: prometheus}
+
+required_flows:
+  - prometheus_scrapes_telemetry
+  - telemetry_to_loki
+  - telemetry_to_tempo
+  - alloy_to_loki
+  - alloy_to_tempo
+  - prometheus_to_alertmanager
+  - loki_to_alertmanager
+  - exporters_to_prometheus
+  - grafana_to_prometheus
+  - grafana_to_loki
+  - grafana_to_tempo
