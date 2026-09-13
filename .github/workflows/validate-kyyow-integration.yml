@@ -1,0 +1,20 @@
+name: validate-kyyow-integration
+on:
+  pull_request:
+    paths:
+      - kyyow-integration.v1.json
+      - KYYOW-INTEGRATION.md
+      - .github/workflows/validate-kyyow-integration.yml
+  push:
+    branches: [main]
+    paths:
+      - kyyow-integration.v1.json
+      - KYYOW-INTEGRATION.md
+      - .github/workflows/validate-kyyow-integration.yml
+permissions:
+  contents: read
+jobs:
+  contract:
+    uses: appolon1908-hue/kyyow-contracts/.github/workflows/validate-platform-component.yml@eea7ec0402acce5a4f63b327b59f20b5d3e98d33
+    with:
+      profile: kyyow-integration.v1.json
