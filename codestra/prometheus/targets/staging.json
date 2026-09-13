@@ -2,7 +2,7 @@
   {
     "targets": ["middleware-intake-staging:8080"],
     "labels": {
-      "activation": "pending",
+      "activation": "active",
       "job_class": "backend",
       "codestra_business": "platform",
       "environment": "staging",
