@@ -1,0 +1,120 @@
+version: 2
+owner: Codestra Platform
+status: CONFIG_PREPARED_NOT_DEPLOYED
+
+authorities:
+  metrics_collection_recording_slo_alerts: appolon1908-hue/Codestra-Prometheus
+  alert_routing: appolon1908-hue/Codestra-Alertmanager
+  telemetry_gateway: appolon1908-hue/Codestra-Telemetry
+  node_exporter: appolon1908-hue/Codestra-Node-Exporter
+  cadvisor: appolon1908-hue/Codestra-cAdvisor
+  postgres_exporter: appolon1908-hue/Codestra-Postgres-Exporter
+  redis_exporter: appolon1908-hue/Codestra-Redis-Exporter
+  blackbox_exporter: appolon1908-hue/Codestra-Blackbox-Exporter
+
+required_labels:
+  - codestra_business
+  - application
+  - service
+  - environment
+  - server
+  - region
+  - deployment
+  - activation
+  - job_class
+  - tenant_scope
+
+forbidden_high_cardinality_labels:
+  - tenant_id
+  - customer_id
+  - account_id
+  - user_id
+  - request_id
+  - correlation_id
+  - trace_id
+  - span_id
+  - email
+  - phone
+  - message_id
+  - order_id
+  - workflow_id
+  - execution_id
+  - raw_url
+  - query_string
+  - db_statement
+  - container_id
+  - pod_uid
+  - exception_message
+
+businesses:
+  - {id: codestra, display_name: Codestra, service_tier: tier_1}
+  - {id: moneybee, display_name: MoneyBee, service_tier: tier_1}
+  - {id: beyvra, display_name: Beyvra Trading, service_tier: tier_1}
+  - {id: breero, display_name: Breero, service_tier: tier_1}
+  - {id: larim-a, display_name: LARIM-A, service_tier: tier_1}
+  - {id: transportation, display_name: Transportation and Freight, service_tier: tier_1}
+  - {id: booked4seasons, display_name: Booked4Seasons, service_tier: tier_2}
+  - {id: social, display_name: Codestra Social, service_tier: tier_2}
+  - {id: klyrow, display_name: Klyrow Email, service_tier: tier_1}
+  - {id: telnexa, display_name: Telnexa Messaging, service_tier: tier_1}
+  - {id: kyqra, display_name: Kyqra, service_tier: tier_2}
+  - {id: restaurant, display_name: Restaurant Platform, service_tier: tier_2}
+  - {id: provisioning, display_name: Codestra Provisioning, service_tier: tier_1}
+
+required_application_metrics:
+  - codestra_http_requests_total
+  - codestra_http_request_duration_seconds
+  - codestra_dependency_latency_seconds
+  - codestra_database_latency_seconds
+  - codestra_queue_depth
+  - codestra_worker_failures_total
+  - codestra_outbox_backlog
+  - codestra_outbox_oldest_age_seconds
+  - codestra_inbox_backlog
+  - codestra_inbox_oldest_age_seconds
+  - codestra_webhook_deliveries_total
+  - codestra_webhook_retries_total
+  - codestra_authentication_failures_total
+  - codestra_authorization_denials_total
+  - codestra_idempotency_conflicts_total
+  - codestra_reconciliation_failures_total
+  - codestra_external_provider_failures_total
+  - codestra_deployment_info
+  - codestra_capability_state
+
+infrastructure_services:
+  - {repo: appolon1908-hue/Codestra-Prometheus, codestra_business: platform, application: observability, service: prometheus, endpoint: "prometheus:9090", path: /metrics, activation: active}
+  - {repo: appolon1908-hue/Codestra-Alertmanager, codestra_business: platform, application: observability, service: alertmanager, endpoint: "alertmanager:9093", path: /metrics, activation: active}
+  - {repo: appolon1908-hue/Codestra-Telemetry, codestra_business: platform, application: observability, service: opentelemetry-collector, endpoint: "otel-collector:8888", path: /metrics, activation: active}
+  - {repo: appolon1908-hue/Codestra-Telemetry, codestra_business: platform, application: observability, service: opentelemetry-ingest, endpoint: "otel-collector:8889", path: /metrics, activation: pending}
+  - {repo: appolon1908-hue/Codestra-Loki, codestra_business: platform, application: observability, service: loki, endpoint: "loki-1:3100", path: /metrics, activation: pending}
+  - {repo: appolon1908-hue/Codestra-Tempo, codestra_business: platform, application: observability, service: tempo, endpoint: "tempo:3200", path: /metrics, activation: pending}
+  - {repo: appolon1908-hue/Codestra-Grafana-, codestra_business: platform, application: observability, service: grafana, endpoint: "grafana:3000", path: /metrics, activation: pending}
+  - {repo: appolon1908-hue/Codestra-Alloy, codestra_business: platform, application: observability, service: alloy, endpoint: "alloy:12345", path: /metrics, activation: pending}
+  - {repo: appolon1908-hue/Codestra-OpenBao, codestra_business: platform, application: security, service: openbao, endpoint: "openbao:8200", path: /v1/sys/metrics, activation: pending}
+  - {repo: appolon1908-hue/Codestra-Node-Exporter, codestra_business: platform, application: infrastructure, service: node-exporter, endpoint: "private-host:9100", path: /metrics, activation: active}
+  - {repo: appolon1908-hue/Codestra-cAdvisor, codestra_business: platform, application: infrastructure, service: cadvisor, endpoint: "private-host:8080", path: /metrics, activation: active}
+  - {repo: appolon1908-hue/Codestra-Postgres-Exporter, codestra_business: platform, application: databases, service: postgres-exporter, endpoint: "postgres-exporter:9187", path: /metrics, activation: active}
+  - {repo: appolon1908-hue/Codestra-Redis-Exporter, codestra_business: platform, application: databases, service: redis-exporter, endpoint: "redis-exporter:9121", path: /metrics, activation: active}
+  - {repo: appolon1908-hue/Codestra-Blackbox-Exporter, codestra_business: platform, application: observability, service: blackbox-exporter, endpoint: "blackbox-exporter:9115", path: /probe, activation: active}
+  - {repo: appolon1908-hue/Caddy, codestra_business: platform, application: edge, service: caddy, endpoint: "caddy:2020", path: /metrics, activation: active}
+  - {repo: appolon1908-hue/Kong, codestra_business: platform, application: gateway, service: kong, endpoint: "kong:8100", path: /metrics, activation: active}
+  - {repo: appolon1908-hue/Middleware-, codestra_business: platform, application: integration, service: middleware, endpoint: "middleware-control-plane:8096", path: /metrics, activation: active}
+  - {repo: appolon1908-hue/Keycloak, codestra_business: platform, application: identity, service: keycloak, endpoint: "keycloak:9000", path: /metrics, activation: active}
+  - {repo: appolon1908-hue/N8N, codestra_business: platform, application: automation, service: n8n, endpoint: "n8n-main:5678", path: /metrics, activation: active}
+  - {repo: appolon1908-hue/Odoo, codestra_business: platform, application: erp, service: odoo, endpoint: "odoo:8069", path: /codestra/metrics, activation: active}
+
+application_services:
+  - {repo: appolon1908-hue/codestra-backend, codestra_business: codestra, application: codestra, service: codestra-backend, endpoint: "codestra-backend:8000", path: /metrics, activation: pending}
+  - {repo: appolon1908-hue/Moneybee-Backend, codestra_business: moneybee, application: moneybee, service: moneybee-backend, endpoint: "moneybee-backend:8000", path: /metrics, activation: pending}
+  - {repo: appolon1908-hue/beyvra-backend, codestra_business: beyvra, application: beyvra, service: beyvra-backend, endpoint: "beyvra-backend:8000", path: /metrics, activation: pending}
+  - {repo: appolon1908-hue/Breero.com, codestra_business: breero, application: breero, service: breero-backend, endpoint: "breero-backend:8000", path: /metrics, activation: pending}
+  - {repo: appolon1908-hue/LARIM-A-Backend, codestra_business: larim-a, application: larim-a, service: larim-a-backend, endpoint: "larim-a-backend:8000", path: /metrics, activation: pending}
+  - {repo: appolon1908-hue/transportation-backend-, codestra_business: transportation, application: transportation, service: transportation-backend, endpoint: "transportation-backend:8000", path: /metrics, activation: pending}
+  - {repo: appolon1908-hue/booked4seasons, codestra_business: booked4seasons, application: booked4seasons, service: booked4seasons-backend, endpoint: "booked4seasons-backend:8000", path: /metrics, activation: pending}
+  - {repo: appolon1908-hue/social.codestra.co, codestra_business: social, application: social, service: social-codestra, endpoint: "social-codestra:3000", path: /metrics, activation: pending}
+  - {repo: appolon1908-hue/klyrow.com, codestra_business: klyrow, application: klyrow, service: klyrow-gateway, endpoint: "klyrow-gateway:8000", path: /metrics, activation: pending}
+  - {repo: appolon1908-hue/telnexa, codestra_business: telnexa, application: telnexa, service: telnexa-gateway, endpoint: "telnexa-gateway:8000", path: /metrics, activation: pending}
+  - {repo: appolon1908-hue/kyqra-crawler, codestra_business: kyqra, application: kyqra, service: kyqra-crawler, endpoint: "kyqra-crawler:3100", path: /metrics, activation: pending}
+  - {repo: appolon1908-hue/Frontend-Resturant-, codestra_business: restaurant, application: restaurant, service: restaurant-backend, endpoint: "restaurant-backend:8000", path: /metrics, activation: pending}
+  - {repo: appolon1908-hue/codestra-provisioning-service, codestra_business: provisioning, application: provisioning, service: provisioning-api, endpoint: "codestra-provisioning-service:9464", path: /metrics, activation: pending}

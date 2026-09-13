@@ -1,0 +1,77 @@
+global:
+  scrape_interval: 15s
+  scrape_timeout: 10s
+  evaluation_interval: 15s
+  external_labels:
+    platform: codestra
+    codestra_business: platform
+    environment: staging
+    region: hetzner-eu
+    deployment: intake-observability-staging
+    prometheus_cluster: codestra-staging
+
+rule_files:
+  - /etc/prometheus/rules-staging/intake-recording-rules.yml
+  - /etc/prometheus/rules-staging/intake-alerts.yml
+
+alerting:
+  alert_relabel_configs:
+    - action: labeldrop
+      regex: prometheus_replica
+  alertmanagers:
+    - scheme: http
+      timeout: 10s
+      static_configs:
+        - targets: ["alertmanager:9093"]
+
+scrape_configs:
+  - job_name: prometheus-staging
+    sample_limit: 100000
+    label_limit: 40
+    label_name_length_limit: 128
+    label_value_length_limit: 2048
+    body_size_limit: 64MB
+    static_configs:
+      - targets: ["127.0.0.1:9090"]
+        labels:
+          activation: active
+          job_class: observability
+          codestra_business: platform
+          environment: staging
+          region: hetzner-eu
+          deployment: intake-observability-staging
+          server: codestra-staging-private-01
+          application: observability
+          service: prometheus
+          tenant_scope: aggregate
+
+  - job_name: middleware-intake-staging
+    scheme: http
+    metrics_path: /metrics
+    sample_limit: 5000
+    label_limit: 32
+    label_name_length_limit: 128
+    label_value_length_limit: 512
+    body_size_limit: 8MB
+    oauth2:
+      client_id: monitoring-readonly
+      client_secret_file: /run/secrets/middleware-staging-monitoring-client-secret
+      scopes:
+        - metrics.read
+      token_url: https://auth-staging.codestra.co/realms/codestra/protocol/openid-connect/token
+    file_sd_configs:
+      - files: ["/etc/prometheus/targets/staging.json"]
+        refresh_interval: 30s
+    relabel_configs:
+      - source_labels: [activation]
+        regex: active
+        action: keep
+      - source_labels: [environment]
+        regex: staging
+        action: keep
+      - source_labels: [tenant_scope]
+        regex: aggregate
+        action: keep
+    metric_relabel_configs:
+      - action: labeldrop
+        regex: '(?i)^(tenant_id|tenant_name|organization_id|organization_name|customer_id|customer_name|account_id|user_id|user_name|email|phone|consumer|workspace|token|secret|password|session_id|request_id|correlation_id|trace_id|span_id|lead_id|order_id|message_id|workflow_id|execution_id|webhook_id|idempotency_key|raw_path|uri|url|query|query_string|client_address|network_peer_address|db_statement|http_target|http_url|url_full|service_instance_id|host_id|container_id|image_id|process_pid|pod_uid|exception_message|id)$'

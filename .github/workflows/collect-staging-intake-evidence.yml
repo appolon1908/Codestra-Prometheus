@@ -1,0 +1,135 @@
+name: Collect controlled intake staging evidence
+
+on:
+  workflow_dispatch:
+    inputs:
+      execution_reason:
+        description: "Why is this read-only staging certification required?"
+        required: true
+        type: string
+      change_id:
+        description: "Approved staging certification identifier"
+        required: true
+        type: string
+      expected_branch_head:
+        description: "Exact protected staging SHA being certified"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: collect-controlled-intake-staging-evidence
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    if: github.ref == 'refs/heads/staging'
+    environment: codestra-staging-observability-certification
+    runs-on: [self-hosted, linux, x64, codestra-staging-observability]
+    timeout-minutes: 10
+    env:
+      BASE_URL: ${{ vars.CODESTRA_MIDDLEWARE_STAGING_PRIVATE_URL }}
+      METRICS_TOKEN_FILE: /run/secrets/codestra/prometheus/middleware-staging-metrics-token
+      HEALTH_TOKEN_FILE: /run/secrets/codestra/prometheus/middleware-staging-health-token
+      EXPECTED_BRANCH_HEAD: ${{ inputs.expected_branch_head }}
+      EXECUTION_REASON: ${{ inputs.execution_reason }}
+      CHANGE_ID: ${{ inputs.change_id }}
+      EVIDENCE_BASENAME: codestra-staging-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+          ref: ${{ github.sha }}
+
+      - name: Validate protected execution authority
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          reason="$(python3 - <<'PY'
+          import os
+          print(" ".join(os.environ["EXECUTION_REASON"].split()))
+          PY
+          )"
+          test "${#reason}" -ge 40
+          [[ "${CHANGE_ID^^}" =~ ^CHG-[A-Z0-9][A-Z0-9._-]{7,}$ ]]
+          [[ "$EXPECTED_BRANCH_HEAD" =~ ^[0-9a-f]{40}$ ]]
+          test "$EXPECTED_BRANCH_HEAD" = "$GITHUB_SHA"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test -n "$BASE_URL"
+          test -f "$METRICS_TOKEN_FILE"
+          test -f "$HEALTH_TOKEN_FILE"
+
+      - name: Collect GET-only private staging evidence
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          evidence_root="$RUNNER_TEMP/$EVIDENCE_BASENAME"
+          install -d -m 0700 "$evidence_root"
+          reason_sha256="$(python3 - <<'PY'
+          import hashlib
+          import os
+          reason = " ".join(os.environ["EXECUTION_REASON"].split())
+          print("sha256:" + hashlib.sha256(reason.encode("utf-8")).hexdigest())
+          PY
+          )"
+          source_sha="$(jq -er '.middleware_source_authority.source_sha' integration/staging-activation-contract-v1.json)"
+          image_digest="$(jq -er '.middleware_source_authority.immutable_image_digest' integration/staging-activation-contract-v1.json)"
+          python3 codestra/scripts/collect_staging_intake_evidence_v2.py \
+            --base-url "$BASE_URL" \
+            --metrics-token-file "$METRICS_TOKEN_FILE" \
+            --health-token-file "$HEALTH_TOKEN_FILE" \
+            --expected-source-sha "$source_sha" \
+            --expected-image-digest "$image_digest" \
+            --authorization-change-id "${CHANGE_ID^^}" \
+            --authorization-reason-sha256 "$reason_sha256" \
+            --output "$evidence_root/evidence.json" \
+            --checksum-output "$evidence_root/evidence.sha256"
+
+      - name: Validate sanitized evidence artifact
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          evidence_root="$RUNNER_TEMP/$EVIDENCE_BASENAME"
+          reason_sha256="$(python3 - <<'PY'
+          import hashlib
+          import os
+          reason = " ".join(os.environ["EXECUTION_REASON"].split())
+          print("sha256:" + hashlib.sha256(reason.encode("utf-8")).hexdigest())
+          PY
+          )"
+          test "$(stat -c '%a' "$evidence_root/evidence.json")" = 600
+          test "$(stat -c '%a' "$evidence_root/evidence.sha256")" = 600
+          computed="sha256:$(sha256sum "$evidence_root/evidence.json" | cut -d' ' -f1)"
+          test "$(tr '[:upper:]' '[:lower:]' < "$evidence_root/evidence.sha256")" = "$computed"
+          jq -e --arg change_id "${CHANGE_ID^^}" --arg reason_sha256 "$reason_sha256" '.schema_version == "1.1" and .overall_result == "PASS" and .environment == "staging" and .authorization == {change_id: $change_id, execution_reason_sha256: $reason_sha256} and .target.private_network_only == true and .target.methods_used == ["GET"] and .target.business_writes_performed == false' "$evidence_root/evidence.json" >/dev/null
+
+      - name: Upload exact staging evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: codestra-staging-intake-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/${{ env.EVIDENCE_BASENAME }}/evidence.json
+            ${{ runner.temp }}/${{ env.EVIDENCE_BASENAME }}/evidence.sha256
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
+
+      - name: Remove ephemeral evidence files
+        if: always()
+        shell: bash
+        run: |
+          evidence_root="$RUNNER_TEMP/$EVIDENCE_BASENAME"
+          if [[ -d "$evidence_root" ]]; then
+            find "$evidence_root" -type f -exec chmod 0600 {} \; -exec unlink {} \;
+            rmdir "$evidence_root"
+          fi
+
+      - name: Preserve source-only boundary
+        run: |
+          echo 'METHODS_USED=GET_ONLY'
+          echo 'BUSINESS_WRITES_PERFORMED=NO'
+          echo 'DEPLOYMENT_PERFORMED=NO'
+          echo 'PRODUCTION_AUTHORIZED=NO'

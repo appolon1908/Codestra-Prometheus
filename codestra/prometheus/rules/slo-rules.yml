@@ -1,0 +1,102 @@
+groups:
+  - name: codestra-slo-recording
+    interval: 30s
+    rules:
+      - record: codestra:slo_http_error_ratio:5m
+        expr: sum by (codestra_business, environment, region, application, service) (rate(codestra_http_requests_total{status=~"5.."}[5m])) / clamp_min(sum by (codestra_business, environment, region, application, service) (rate(codestra_http_requests_total[5m])), 0.001)
+      - record: codestra:slo_http_error_ratio:1h
+        expr: sum by (codestra_business, environment, region, application, service) (rate(codestra_http_requests_total{status=~"5.."}[1h])) / clamp_min(sum by (codestra_business, environment, region, application, service) (rate(codestra_http_requests_total[1h])), 0.001)
+      - record: codestra:slo_http_error_ratio:6h
+        expr: sum by (codestra_business, environment, region, application, service) (rate(codestra_http_requests_total{status=~"5.."}[6h])) / clamp_min(sum by (codestra_business, environment, region, application, service) (rate(codestra_http_requests_total[6h])), 0.001)
+      - record: codestra:slo_http_error_ratio:3d
+        expr: sum by (codestra_business, environment, region, application, service) (rate(codestra_http_requests_total{status=~"5.."}[3d])) / clamp_min(sum by (codestra_business, environment, region, application, service) (rate(codestra_http_requests_total[3d])), 0.001)
+      - record: codestra:slo_http_availability:5m
+        expr: 1 - codestra:slo_http_error_ratio:5m
+      - record: codestra:slo_http_burn_rate:5m
+        expr: codestra:slo_http_error_ratio:5m / 0.001
+      - record: codestra:slo_http_burn_rate:1h
+        expr: codestra:slo_http_error_ratio:1h / 0.001
+      - record: codestra:slo_http_burn_rate:6h
+        expr: codestra:slo_http_error_ratio:6h / 0.001
+      - record: codestra:slo_http_burn_rate:3d
+        expr: codestra:slo_http_error_ratio:3d / 0.001
+      - record: codestra:slo_probe_availability:5m
+        expr: avg_over_time(probe_success[5m])
+
+  - name: codestra-slo-alerts
+    interval: 30s
+    rules:
+      - alert: CodestraSLOFastBurn
+        expr: (codestra:slo_http_burn_rate:5m > 14.4) and on (codestra_business, environment, region, application, service) (codestra:slo_http_burn_rate:1h > 14.4)
+        for: 2m
+        labels:
+          severity: high
+          owner: codestra-sre
+          codestra_business: "{{ $labels.codestra_business }}"
+          service: "{{ $labels.service }}"
+          environment: "{{ $labels.environment }}"
+          alert_family: slo
+        annotations:
+          summary: "Fast SLO burn for {{ $labels.codestra_business }}/{{ $labels.service }}"
+          description: "The service is consuming the 99.9% availability error budget at more than 14.4x in both the 5-minute and 1-hour windows."
+          runbook_url: "https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#slo-fast-burn"
+
+      - alert: CodestraSLOSlowBurn
+        expr: (codestra:slo_http_burn_rate:6h > 6) and on (codestra_business, environment, region, application, service) (codestra:slo_http_burn_rate:3d > 6)
+        for: 30m
+        labels:
+          severity: warning
+          owner: codestra-sre
+          codestra_business: "{{ $labels.codestra_business }}"
+          service: "{{ $labels.service }}"
+          environment: "{{ $labels.environment }}"
+          alert_family: slo
+        annotations:
+          summary: "Sustained SLO burn for {{ $labels.codestra_business }}/{{ $labels.service }}"
+          description: "The service is consuming the 99.9% availability error budget at more than 6x in both the 6-hour and 3-day windows."
+          runbook_url: "https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#slo-slow-burn"
+
+      - alert: CodestraTargetSampleBudgetExceeded
+        expr: scrape_samples_post_metric_relabeling > 200000
+        for: 15m
+        labels:
+          severity: warning
+          owner: codestra-observability
+          codestra_business: "{{ $labels.codestra_business }}"
+          service: "{{ $labels.service }}"
+          environment: "{{ $labels.environment }}"
+          alert_family: cardinality
+        annotations:
+          summary: "Metric sample budget exceeded for {{ $labels.service }}"
+          description: "A scrape target has produced more than 200,000 post-relabel samples for 15 minutes. Activation should be reviewed before increasing the budget."
+          runbook_url: "https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#sample-budget"
+
+      - alert: CodestraPrometheusHeadSeriesHigh
+        expr: prometheus_tsdb_head_series > 2000000
+        for: 15m
+        labels:
+          severity: warning
+          owner: codestra-observability
+          codestra_business: platform
+          service: prometheus
+          environment: production
+          alert_family: capacity
+        annotations:
+          summary: "Prometheus active series exceeds the corporate budget"
+          description: "Prometheus has more than two million active head series for 15 minutes. Investigate recent target activation or cardinality growth."
+          runbook_url: "https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#head-series-capacity"
+
+      - alert: CodestraPrometheusNotificationFailures
+        expr: increase(prometheus_notifications_errors_total[10m]) > 0
+        for: 5m
+        labels:
+          severity: high
+          owner: codestra-observability
+          codestra_business: platform
+          service: prometheus
+          environment: production
+          alert_family: alert-delivery
+        annotations:
+          summary: "Prometheus cannot deliver alerts to Alertmanager"
+          description: "Prometheus notification errors increased during the last 10 minutes. Alert evaluation may still work while incident delivery is impaired."
+          runbook_url: "https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#notification-failures"

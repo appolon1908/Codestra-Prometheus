@@ -1,0 +1,96 @@
+groups:
+  - name: codestra-http-recording
+    interval: 30s
+    rules:
+      - record: codestra:http_requests:rate5m
+        expr: sum by (codestra_business, environment, region, deployment, server, application, service) (rate(codestra_http_requests_total[5m]))
+      - record: codestra:http_5xx:rate5m
+        expr: sum by (codestra_business, environment, region, deployment, server, application, service) (rate(codestra_http_requests_total{status=~"5.."}[5m]))
+      - record: codestra:http_error_ratio:5m
+        expr: codestra:http_5xx:rate5m / clamp_min(codestra:http_requests:rate5m, 0.001)
+      - record: codestra:http_duration_seconds:p50_5m
+        expr: histogram_quantile(0.50, sum by (le, codestra_business, environment, region, deployment, server, application, service) (rate(codestra_http_request_duration_seconds_bucket[5m])))
+      - record: codestra:http_duration_seconds:p95_5m
+        expr: histogram_quantile(0.95, sum by (le, codestra_business, environment, region, deployment, server, application, service) (rate(codestra_http_request_duration_seconds_bucket[5m])))
+      - record: codestra:http_duration_seconds:p99_5m
+        expr: histogram_quantile(0.99, sum by (le, codestra_business, environment, region, deployment, server, application, service) (rate(codestra_http_request_duration_seconds_bucket[5m])))
+      - record: codestra:business_http_requests:rate5m
+        expr: sum by (codestra_business, environment, region) (rate(codestra_http_requests_total[5m]))
+      - record: codestra:business_http_5xx:rate5m
+        expr: sum by (codestra_business, environment, region) (rate(codestra_http_requests_total{status=~"5.."}[5m]))
+      - record: codestra:business_http_error_ratio:5m
+        expr: codestra:business_http_5xx:rate5m / clamp_min(codestra:business_http_requests:rate5m, 0.001)
+
+  - name: codestra-dependency-recording
+    interval: 30s
+    rules:
+      - record: codestra:dependency_latency_seconds:p95_5m
+        expr: histogram_quantile(0.95, sum by (le, codestra_business, environment, region, deployment, application, service, dependency) (rate(codestra_dependency_latency_seconds_bucket[5m])))
+      - record: codestra:database_latency_seconds:p95_5m
+        expr: histogram_quantile(0.95, sum by (le, codestra_business, environment, region, deployment, application, service, operation) (rate(codestra_database_latency_seconds_bucket[5m])))
+      - record: codestra:queue_depth:max
+        expr: max by (codestra_business, environment, region, deployment, application, service, queue) (codestra_queue_depth)
+      - record: codestra:worker_failures:rate5m
+        expr: sum by (codestra_business, environment, region, deployment, application, service, worker) (rate(codestra_worker_failures_total[5m]))
+
+  - name: codestra-delivery-recording
+    interval: 30s
+    rules:
+      - record: codestra:outbox_backlog:max
+        expr: max by (codestra_business, environment, region, deployment, application, service, destination) (codestra_outbox_backlog)
+      - record: codestra:outbox_oldest_age_seconds:max
+        expr: max by (codestra_business, environment, region, deployment, application, service, destination) (codestra_outbox_oldest_age_seconds)
+      - record: codestra:inbox_backlog:max
+        expr: max by (codestra_business, environment, region, deployment, application, service, source) (codestra_inbox_backlog)
+      - record: codestra:inbox_oldest_age_seconds:max
+        expr: max by (codestra_business, environment, region, deployment, application, service, source) (codestra_inbox_oldest_age_seconds)
+      - record: codestra:webhook_deliveries:rate5m
+        expr: sum by (codestra_business, environment, region, deployment, application, service, provider, result) (rate(codestra_webhook_deliveries_total[5m]))
+      - record: codestra:webhook_delivery_success_ratio:5m
+        expr: sum by (codestra_business, environment, region, deployment, application, service, provider) (rate(codestra_webhook_deliveries_total{result="success"}[5m])) / clamp_min(sum by (codestra_business, environment, region, deployment, application, service, provider) (rate(codestra_webhook_deliveries_total[5m])), 0.001)
+      - record: codestra:webhook_retries:rate5m
+        expr: sum by (codestra_business, environment, region, deployment, application, service, provider) (rate(codestra_webhook_retries_total[5m]))
+
+  - name: codestra-security-recording
+    interval: 30s
+    rules:
+      - record: codestra:authentication_failures:rate5m
+        expr: sum by (codestra_business, environment, region, deployment, application, service, reason) (rate(codestra_authentication_failures_total[5m]))
+      - record: codestra:authorization_denials:rate5m
+        expr: sum by (codestra_business, environment, region, deployment, application, service, reason) (rate(codestra_authorization_denials_total[5m])) or sum by (codestra_business, environment, region, deployment, application, service, result) (rate(codestra_auth_denials_total[5m]))
+      - record: codestra:idempotency_conflicts:rate5m
+        expr: sum by (codestra_business, environment, region, deployment, application, service, operation) (rate(codestra_idempotency_conflicts_total[5m]))
+      - record: codestra:reconciliation_failures:rate5m
+        expr: sum by (codestra_business, environment, region, deployment, application, service, reconciliation) (rate(codestra_reconciliation_failures_total[5m]))
+      - record: codestra:external_provider_failures:rate5m
+        expr: sum by (codestra_business, environment, region, deployment, application, service, provider, reason) (rate(codestra_external_provider_failures_total[5m]))
+
+  - name: codestra-operations-dashboard-recording
+    interval: 30s
+    rules:
+      - record: codestra:operations_dashboard_requests:rate5m
+        expr: sum by (codestra_business, environment, region, deployment, server, application, service, operation) (rate(codestra_http_requests_total{operation=~"/v1/operations-dashboard/.*"}[5m]))
+      - record: codestra:operations_dashboard_5xx:rate5m
+        expr: sum by (codestra_business, environment, region, deployment, server, application, service, operation) (rate(codestra_http_requests_total{operation=~"/v1/operations-dashboard/.*",status=~"5.."}[5m]))
+      - record: codestra:operations_dashboard_error_ratio:5m
+        expr: codestra:operations_dashboard_5xx:rate5m / clamp_min(codestra:operations_dashboard_requests:rate5m, 0.001)
+      - record: codestra:operations_dashboard_duration_seconds:p95_5m
+        expr: histogram_quantile(0.95, sum by (le, codestra_business, environment, region, deployment, server, application, service, operation) (rate(codestra_http_request_duration_seconds_bucket{operation=~"/v1/operations-dashboard/.*"}[5m])))
+      - record: codestra:operations_dashboard_auth_failures:rate5m
+        expr: sum by (codestra_business, environment, region, deployment, server, application, service, reason) (rate(codestra_operations_dashboard_auth_failures_total[5m]))
+      - record: codestra:operations_dashboard_release_gate_state:max
+        expr: max by (codestra_business, environment, region, deployment, server, application, service, gate, state) (codestra_operations_dashboard_release_gate_state)
+      - record: codestra:operations_dashboard_canary_state:max
+        expr: max by (codestra_business, environment, region, deployment, server, application, service, provider, channel, state) (codestra_operations_dashboard_canary_state)
+
+  - name: codestra-platform-recording
+    interval: 30s
+    rules:
+      - record: codestra:target_up:ratio
+        expr: avg by (codestra_business, environment, region, application, service) (up)
+      - record: codestra:scrape_samples_post_relabel:max
+        expr: max by (codestra_business, environment, region, application, service) (scrape_samples_post_metric_relabeling)
+      - record: codestra:scrape_duration_seconds:p95_5m
+        expr: quantile_over_time(0.95, scrape_duration_seconds[5m])
+      - record: codestra:deployment_info:max
+        expr: max by (codestra_business, environment, region, deployment, application, service, version, commit) (codestra_deployment_info)

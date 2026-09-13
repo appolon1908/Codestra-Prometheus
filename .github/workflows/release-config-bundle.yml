@@ -1,0 +1,15 @@
+name: Release signed Prometheus configuration bundle
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag: {description: "Immutable label codestra-prometheus-vX.Y.Z", required: true, type: string}
+      protected_source_sha: {description: "Exact protected production commit", required: true, type: string}
+permissions: {contents: read, packages: write, id-token: write, attestations: write}
+jobs:
+  release:
+    uses: appolon1908-hue/Codestra-Telemetry/.github/workflows/reusable-release-config-bundle.yml@777292781faeca9348d0e2ecdce6ac3f50c91d93
+    with:
+      component_id: prometheus
+      release_tag: ${{ inputs.release_tag }}
+      protected_source_sha: ${{ inputs.protected_source_sha }}
+      calling_workflow_path: release-config-bundle.yml

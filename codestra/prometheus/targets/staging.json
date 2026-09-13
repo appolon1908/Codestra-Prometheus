@@ -1,0 +1,18 @@
+[
+  {
+    "targets": ["middleware-intake-staging:8080"],
+    "labels": {
+      "activation": "pending",
+      "job_class": "backend",
+      "codestra_business": "platform",
+      "environment": "staging",
+      "region": "hetzner-eu",
+      "deployment": "middleware-f6748a58",
+      "server": "codestra-staging-private-01",
+      "application": "integration",
+      "service": "middleware-intake",
+      "tenant_scope": "aggregate",
+      "release_id": "f6748a58f8d2-695fa3ce3f50"
+    }
+  }
+]

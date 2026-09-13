@@ -1,0 +1,304 @@
+name: Controlled intake staging activation preparation gate
+
+on:
+  pull_request:
+    paths:
+      - "integration/staging-activation-contract-v1.json"
+      - ".github/workflows/collect-staging-intake-evidence.yml"
+      - ".github/workflows/controlled-intake-staging-activation-gate.yml"
+  workflow_dispatch:
+    inputs:
+      execution_reason:
+        description: "Why is this integration being executed?"
+        required: true
+        type: string
+      change_id:
+        description: "Approved staging certification identifier"
+        required: true
+        type: string
+      expected_branch_head:
+        description: "Exact 40-character branch SHA being certified"
+        required: true
+        type: string
+      middleware_image_digest:
+        description: "Verified immutable Middleware digest"
+        required: true
+        type: string
+      staging_evidence_checksum:
+        description: "Passing runtime evidence checksum"
+        required: true
+        type: string
+      staging_evidence_run_id:
+        description: "Successful evidence-collector workflow run ID"
+        required: true
+        type: string
+      staging_evidence_artifact_name:
+        description: "Exact unexpired evidence artifact name"
+        required: true
+        type: string
+      confirm_prometheus_only:
+        description: "Only the approved Prometheus target may later become active"
+        required: true
+        type: boolean
+      confirm_blackbox_pending:
+        description: "Blackbox remains pending"
+        required: true
+        type: boolean
+      confirm_no_external_effects:
+        description: "No external effect or production mutation is authorized"
+        required: true
+        type: boolean
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: controlled-intake-staging-activation-${{ github.repository }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-preparation-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Validate signed immutable Middleware release lock
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import re
+          from pathlib import Path
+
+          data = json.loads(Path("integration/staging-activation-contract-v1.json").read_text())
+          assert data["schema_version"] == "1.1"
+          assert data["suite_id"] == "codestra-controlled-intake-monitoring-v1"
+          assert data["repository"] == os.environ["GITHUB_REPOSITORY"]
+          assert data["execution_question"] == "Why is this integration being executed?"
+          assert data["execution_reason_required"] is True
+          assert data["source_only_preparation"] is True
+
+          source = data["middleware_source_authority"]
+          expected = {
+              "repository": "appolon1908-hue/Middleware-",
+              "source_sha": "f6748a58f8d2590520a4f28776770957061cdea1",
+              "source_state": "MERGED_REVIEWED_EXACT_SHA",
+              "immutable_image_reference": "ghcr.io/appolon1908-hue/codestra-middleware@sha256:695fa3ce3f50ba4d0ae0784976b946a0a683ca731155e4bd3bd9e90a4670b820",
+              "immutable_image_digest": "sha256:695fa3ce3f50ba4d0ae0784976b946a0a683ca731155e4bd3bd9e90a4670b820",
+              "image_digest_state": "VERIFIED_SIGNED_IMMUTABLE_IMAGE_AVAILABLE",
+              "release_id": "f6748a58f8d2-695fa3ce3f50",
+              "release_run_id": 33314094004,
+              "release_run_attempt": 1,
+              "release_run_url": "https://github.com/appolon1908-hue/Middleware-/actions/runs/33314094004",
+              "release_artifact_name": "signed-middleware-release-f6748a58f8d2590520a4f28776770957061cdea1-33314094004-1",
+              "release_built_at": "2026-08-30T13:24:37Z",
+              "release_workflow_path": ".github/workflows/release.yml",
+              "release_workflow_identity": "https://github.com/appolon1908-hue/Middleware-/.github/workflows/release.yml@refs/heads/main",
+              "release_oidc_issuer": "https://token.actions.githubusercontent.com",
+              "release_manifest_schema_version": "1.0",
+              "release_manifest_verification": "PASS_IN_SIGNED_RELEASE_WORKFLOW",
+              "signed_release_artifact_sha256": "sha256:13ec5eb0c4a8e26cc342639f4ff5408d81f3de2b0cfefa80c455e65f14f9fbf6",
+              "sbom_sha256": "sha256:762846774ffe14edabbd62ce611b5039dbf8394fd21393145e0a7f35ad7275cb",
+              "vulnerability_report_sha256": "sha256:3702cbaa225530d52e82f75b0f07d6449d2253cdcdbe573962e5620eb5fea4fb",
+              "image_signature": "sigstore-keyless",
+              "manifest_signature": "sigstore-keyless-bundle",
+              "transparency_log_required": True,
+              "vulnerability_policy": "fail-high-or-critical-with-fix",
+              "platforms": ["linux/amd64"],
+              "schema_or_migration_head": "0003_immutable_event_ledger",
+              "external_effects_default": "disabled",
+          }
+          for key, value in expected.items():
+              assert source[key] == value, (key, source.get(key), value)
+          hash_keys = ("immutable_image_digest", "signed_release_artifact_sha256", "sbom_sha256", "vulnerability_report_sha256")
+          assert all(re.fullmatch(r"sha256:[0-9a-f]{64}", source[key]) for key in hash_keys)
+
+          declared = data["private_endpoints"]
+          allowed = {
+              ("GET", "/metrics", "monitoring-readonly", "metrics.read", False),
+              ("GET", "/v1/runtime/safety", "monitoring-readonly", "health.read", False),
+          }
+          actual = {(item["method"], item["path"], item["client_id"], item["scope"], item["public_exposure"]) for item in declared}
+          assert len(declared) == len(allowed)
+          assert actual == allowed
+          assert all(item["method"] == "GET" and item["client_id"] == "monitoring-readonly" and item["public_exposure"] is False for item in declared)
+
+          credentials = data["staging_credentials"]
+          assert credentials["storage"] == "OUTSIDE_GIT"
+          assert credentials["static_tokens_allowed"] is False
+          assert credentials["secret_values_committed"] is False
+          assert 60 <= credentials["minimum_token_ttl_seconds"] <= credentials["maximum_token_ttl_seconds"] <= 900
+
+          evidence = data["staging_evidence"]
+          assert evidence["collector_repository"] == "appolon1908-hue/Codestra-Prometheus"
+          assert evidence["checksum"] is None
+          assert evidence["state"] == "PENDING_RUNTIME_EXECUTION"
+          assert {"signed_release_manifest", "sigstore_identity"}.issubset(evidence["must_verify"])
+
+          policy = data["activation_policy"]
+          assert policy["prometheus_target_current_state"] == "pending"
+          assert policy["prometheus_target_allowed_next_state"] == "active"
+          assert policy["only_prometheus_target_may_transition"] is True
+          assert policy["prometheus_activation_pr_required"] is True
+          assert policy["prometheus_activation_pr_must_cite_image_digest"] is True
+          assert policy["prometheus_activation_pr_must_cite_evidence_checksum"] is True
+          assert policy["blackbox_target_current_state"] == "pending"
+          assert policy["blackbox_must_remain_pending"] is True
+          assert policy["blackbox_activation_requires_independent_review"] is True
+          assert policy["blackbox_probe_must_be_side_effect_free"] is True
+          assert policy["blackbox_allowed_methods"] == ["GET", "HEAD"]
+          if data["component"] == "blackbox_exporter":
+              assert policy["blackbox_allowed_status"] == "PENDING_ONLY"
+          assert policy["production_activation_authorized"] is False
+          assert all(value is False for value in data["runtime_effects"].values())
+          print("CONTROLLED_STAGING_IMMUTABLE_DIGEST_LOCK=PASS")
+          PY
+
+  verify-execution-evidence-inputs:
+    if: github.event_name == 'workflow_dispatch'
+    needs: validate-preparation-contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      EXECUTION_REASON: ${{ inputs.execution_reason }}
+      CHANGE_ID: ${{ inputs.change_id }}
+      EXPECTED_BRANCH_HEAD: ${{ inputs.expected_branch_head }}
+      MIDDLEWARE_IMAGE_DIGEST: ${{ inputs.middleware_image_digest }}
+      STAGING_EVIDENCE_CHECKSUM: ${{ inputs.staging_evidence_checksum }}
+      STAGING_EVIDENCE_RUN_ID: ${{ inputs.staging_evidence_run_id }}
+      STAGING_EVIDENCE_ARTIFACT_NAME: ${{ inputs.staging_evidence_artifact_name }}
+      CONFIRM_PROMETHEUS_ONLY: ${{ inputs.confirm_prometheus_only }}
+      CONFIRM_BLACKBOX_PENDING: ${{ inputs.confirm_blackbox_pending }}
+      CONFIRM_NO_EXTERNAL_EFFECTS: ${{ inputs.confirm_no_external_effects }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Download exact successful runtime evidence artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -Eeuo pipefail
+          [[ "$STAGING_EVIDENCE_RUN_ID" =~ ^[1-9][0-9]*$ ]]
+          run_json="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$STAGING_EVIDENCE_RUN_ID")"
+          test "$(jq -r '.status' <<<"$run_json")" = completed
+          test "$(jq -r '.conclusion' <<<"$run_json")" = success
+          test "$(jq -r '.event' <<<"$run_json")" = workflow_dispatch
+          test "$(jq -r '.path' <<<"$run_json")" = .github/workflows/collect-staging-intake-evidence.yml
+          test "$(jq -r '.head_branch' <<<"$run_json")" = staging
+          test "$(jq -r '.head_sha' <<<"$run_json")" = "$EXPECTED_BRANCH_HEAD"
+          expected_artifact_name="codestra-staging-intake-evidence-${STAGING_EVIDENCE_RUN_ID}-$(jq -r '.run_attempt' <<<"$run_json")"
+          test "$STAGING_EVIDENCE_ARTIFACT_NAME" = "$expected_artifact_name"
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$STAGING_EVIDENCE_RUN_ID/artifacts" \
+            | jq -e --arg name "$STAGING_EVIDENCE_ARTIFACT_NAME" '[.artifacts[] | select(.name == $name and .expired == false)] | length == 1' >/dev/null
+          install -d -m 0700 staging-evidence-artifact
+          gh run download "$STAGING_EVIDENCE_RUN_ID" \
+            --repo "$GITHUB_REPOSITORY" \
+            --name "$STAGING_EVIDENCE_ARTIFACT_NAME" \
+            --dir staging-evidence-artifact
+
+      - name: Verify runtime evidence references and content
+        run: |
+          python3 - <<'PY'
+          import hashlib
+          import json
+          import os
+          import re
+          import subprocess
+          from datetime import UTC, datetime, timedelta
+          from pathlib import Path
+
+          reason = " ".join(os.environ["EXECUTION_REASON"].split())
+          if len(reason) < 40:
+              raise SystemExit("execution_reason must explain the operational need")
+          if not re.fullmatch(r"CHG-[A-Z0-9][A-Z0-9._-]{7,}", os.environ["CHANGE_ID"].strip().upper()):
+              raise SystemExit("change_id must use CHG-* format")
+          expected_head = os.environ["EXPECTED_BRANCH_HEAD"].strip().lower()
+          actual_head = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+          if not re.fullmatch(r"[0-9a-f]{40}", expected_head) or actual_head != expected_head:
+              raise SystemExit("exact-head validation failed")
+
+          source = json.loads(Path("integration/staging-activation-contract-v1.json").read_text())["middleware_source_authority"]
+          image = os.environ["MIDDLEWARE_IMAGE_DIGEST"].strip().lower()
+          evidence = os.environ["STAGING_EVIDENCE_CHECKSUM"].strip().lower()
+          pattern = r"sha256:[0-9a-f]{64}"
+          if not re.fullmatch(pattern, image) or image != source["immutable_image_digest"]:
+              raise SystemExit("image digest must exactly match the contract lock")
+          if not re.fullmatch(pattern, evidence):
+              raise SystemExit("runtime evidence checksum must use sha256:<64 lowercase hex>")
+          forbidden_evidence = {source["immutable_image_digest"], source["signed_release_artifact_sha256"], source["sbom_sha256"], source["vulnerability_report_sha256"]}
+          if evidence in forbidden_evidence:
+              raise SystemExit("runtime evidence must differ from every release or image checksum")
+
+          artifact_root = Path("staging-evidence-artifact")
+          evidence_files = list(artifact_root.rglob("evidence.json"))
+          checksum_files = list(artifact_root.rglob("evidence.sha256"))
+          if len(evidence_files) != 1 or len(checksum_files) != 1:
+              raise SystemExit("artifact must contain exactly one evidence document and checksum")
+          evidence_bytes = evidence_files[0].read_bytes()
+          computed = "sha256:" + hashlib.sha256(evidence_bytes).hexdigest()
+          if computed != evidence:
+              raise SystemExit("runtime evidence checksum does not match the downloaded artifact")
+          if checksum_files[0].read_text(encoding="utf-8").strip().lower() != computed:
+              raise SystemExit("artifact checksum file does not match the evidence document")
+          evidence_document = json.loads(evidence_bytes)
+          if evidence_document.get("schema_version") != "1.1" or evidence_document.get("overall_result") != "PASS":
+              raise SystemExit("runtime evidence schema or result is invalid")
+          generated_at = datetime.fromisoformat(evidence_document["generated_at"])
+          now = datetime.now(UTC)
+          if generated_at.tzinfo is None or generated_at > now + timedelta(minutes=5) or generated_at < now - timedelta(hours=24):
+              raise SystemExit("runtime evidence is outside its 24-hour certification window")
+          if evidence_document.get("environment") != "staging":
+              raise SystemExit("runtime evidence is not from staging")
+          expected_authorization = {
+              "change_id": os.environ["CHANGE_ID"].strip().upper(),
+              "execution_reason_sha256": "sha256:" + hashlib.sha256(reason.encode("utf-8")).hexdigest(),
+          }
+          if evidence_document.get("authorization") != expected_authorization:
+              raise SystemExit("runtime evidence was collected under a different approval")
+          target = evidence_document.get("target", {})
+          if target.get("private_network_only") is not True or target.get("methods_used") != ["GET"] or target.get("business_writes_performed") is not False:
+              raise SystemExit("runtime evidence target boundary is unsafe")
+          release = evidence_document.get("middleware_release", {})
+          if release.get("source_sha") != source["source_sha"] or release.get("image_digest") != image:
+              raise SystemExit("runtime evidence release identity differs from the contract lock")
+          checks = evidence_document.get("checks", {})
+          required_checks = {
+              "unauthenticated_metrics_denied": True,
+              "wrong_token_metrics_denied": True,
+              "authenticated_metrics_scrapes": 2,
+              "runtime_safety": "PASS",
+              "health_token_metrics_denied": True,
+              "metrics_token_runtime_safety_denied": True,
+              "token_scope_isolation": "PASS",
+          }
+          if any(checks.get(key) != value for key, value in required_checks.items()):
+              raise SystemExit("runtime evidence omits a required authentication or safety check")
+          scrapes = evidence_document.get("metrics", {}).get("scrapes")
+          if not isinstance(scrapes, list) or len(scrapes) != 2:
+              raise SystemExit("runtime evidence must contain exactly two metric scrapes")
+          for scrape in scrapes:
+              sampled = set(scrape.get("sampled_metric_families", []))
+              required = set(scrape.get("required_metric_families", []))
+              if not required or not required.issubset(sampled) or scrape.get("missing_metric_families") != []:
+                  raise SystemExit("runtime evidence does not contain samples for every required metric family")
+          safety = evidence_document.get("runtime_safety", {})
+          if any(safety.get(key) is not True for key in ("provider_effects_disabled", "all_external_effects_disabled", "staging_safe")):
+              raise SystemExit("runtime safety evidence permits an external effect")
+          expected_activation = {"prometheus_target_state": "pending", "blackbox_target_state": "pending", "production_authorized": False}
+          if evidence_document.get("activation") != expected_activation:
+              raise SystemExit("runtime evidence activation boundary is invalid")
+          for name in ("CONFIRM_PROMETHEUS_ONLY", "CONFIRM_BLACKBOX_PENDING", "CONFIRM_NO_EXTERNAL_EFFECTS"):
+              if os.environ[name].lower() != "true":
+                  raise SystemExit(f"{name.lower()} confirmation is required")
+
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as summary:
+              summary.write("## Controlled staging evidence references\n")
+              summary.write(f"- Change ID: `{expected_authorization['change_id']}`\n")
+              summary.write(f"- Execution reason SHA-256: `{expected_authorization['execution_reason_sha256']}`\n")
+              summary.write(f"- Exact head: `{actual_head}`\n")
+              summary.write(f"- Locked Middleware image: `{image}`\n- Runtime evidence: `{evidence}`\n")
+              summary.write(f"- Evidence run: `{os.environ['STAGING_EVIDENCE_RUN_ID']}`\n- Evidence artifact: `{os.environ['STAGING_EVIDENCE_ARTIFACT_NAME']}`\n")
+              summary.write("- Prometheus activation: **separate PR required**\n")
+              summary.write("- Blackbox: **pending**\n- Deployment by this workflow: **No**\n")
+          print("CONTROLLED_STAGING_EVIDENCE_REFERENCES=PASS")
+          PY

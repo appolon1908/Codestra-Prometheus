@@ -1,0 +1,226 @@
+groups:
+  - name: codestra.corporate.watchdog
+    interval: 30s
+    rules:
+      - alert: CodestraWatchdog
+        expr: vector(1)
+        labels:
+          severity: informational
+          owner: platform-observability
+          codestra_business: codestra
+          application: observability
+          service: prometheus
+          environment: control-plane
+          notification_class: watchdog
+        annotations:
+          summary: Codestra alerting watchdog is alive
+          description: This continuously firing alert proves the Prometheus to Alertmanager control path remains active.
+          runbook_url: https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/runtime-v1/RUNBOOKS.md#codestrawatchdog
+
+  - name: codestra.corporate.availability
+    interval: 30s
+    rules:
+      - alert: CodestraTargetDown
+        expr: up == 0
+        for: 5m
+        labels:
+          severity: high
+          owner: platform-observability
+          notification_class: service-availability
+        annotations:
+          summary: '{{ $labels.service }} scrape target is down'
+          description: 'Prometheus cannot scrape {{ $labels.instance }} for business {{ $labels.codestra_business }} in {{ $labels.environment }}.'
+          runbook_url: https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/runtime-v1/RUNBOOKS.md#codestratargetdown
+      - alert: CodestraBlackboxProbeFailed
+        expr: probe_success == 0
+        for: 5m
+        labels:
+          severity: high
+          owner: platform-observability
+          notification_class: external-availability
+        annotations:
+          summary: '{{ $labels.service }} synthetic probe is failing'
+          description: 'The approved {{ $labels.module }} probe for {{ $labels.instance }} has failed for five minutes.'
+          runbook_url: https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/runtime-v1/RUNBOOKS.md#codestrablackboxprobefailed
+      - alert: CodestraPrometheusReloadFailed
+        expr: prometheus_config_last_reload_successful == 0
+        for: 5m
+        labels:
+          severity: high
+          owner: platform-observability
+          codestra_business: codestra
+          application: observability
+          service: prometheus
+          notification_class: configuration
+        annotations:
+          summary: Prometheus configuration reload failed
+          description: Prometheus rejected the latest configuration or rule reload; the prior configuration may still be active.
+          runbook_url: https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/runtime-v1/RUNBOOKS.md#codestraprometheusreloadfailed
+
+  - name: codestra.corporate.slo
+    interval: 30s
+    rules:
+      - alert: CodestraSLOFastBurn
+        expr: |
+          codestra:slo_error_budget_burn5m > 14.4
+          and on (codestra_business, application, service, environment)
+          codestra:slo_error_budget_burn1h > 6
+        for: 5m
+        labels:
+          severity: critical
+          owner: service-owner
+          notification_class: slo-burn
+        annotations:
+          summary: '{{ $labels.service }} is rapidly consuming its error budget'
+          description: 'Both the 5-minute and 1-hour burn-rate windows are above the fast-burn thresholds for {{ $labels.codestra_business }} in {{ $labels.environment }}.'
+          runbook_url: https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/runtime-v1/RUNBOOKS.md#codestraslofastburn
+      - alert: CodestraSLOSustainedBurn
+        expr: codestra:slo_error_budget_burn1h > 3
+        for: 2h
+        labels:
+          severity: warning
+          owner: service-owner
+          notification_class: slo-burn
+        annotations:
+          summary: '{{ $labels.service }} has a sustained error-budget burn'
+          description: 'The one-hour burn rate has remained above 3x for two hours for {{ $labels.codestra_business }} in {{ $labels.environment }}.'
+          runbook_url: https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/runtime-v1/RUNBOOKS.md#codestraslosustainedburn
+
+  - name: codestra.corporate.capacity-and-workers
+    interval: 30s
+    rules:
+      - alert: CodestraQueueSaturation
+        expr: codestra:queue_utilization_ratio:max > 0.80
+        for: 10m
+        labels:
+          severity: warning
+          owner: service-owner
+          notification_class: capacity
+        annotations:
+          summary: '{{ $labels.queue }} queue is above 80 percent capacity'
+          description: 'Queue saturation is sustained for {{ $labels.service }} in {{ $labels.environment }}.'
+          runbook_url: https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/runtime-v1/RUNBOOKS.md#codestraqueuesaturation
+      - alert: CodestraWorkerFailures
+        expr: codestra:worker_failure_rate5m > 0
+        for: 10m
+        labels:
+          severity: warning
+          owner: service-owner
+          notification_class: worker-health
+        annotations:
+          summary: '{{ $labels.worker_class }} workers are failing'
+          description: 'Worker failures continue for {{ $labels.service }} in {{ $labels.environment }}.'
+          runbook_url: https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/runtime-v1/RUNBOOKS.md#codestraworkerfailures
+      - alert: CodestraContainerOOM
+        expr: increase(container_oom_events_total[10m]) > 0
+        labels:
+          severity: high
+          owner: platform-observability
+          notification_class: container-health
+        annotations:
+          summary: 'Container {{ $labels.container }} was terminated by the OOM killer'
+          description: 'An out-of-memory event occurred for {{ $labels.service }} on {{ $labels.server }}.'
+          runbook_url: https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/runtime-v1/RUNBOOKS.md#codestracontaineroom
+      - alert: CodestraRedisUnavailable
+        expr: redis_up == 0
+        for: 3m
+        labels:
+          severity: high
+          owner: platform-data
+          notification_class: dependency-availability
+        annotations:
+          summary: 'Redis instance {{ $labels.redis_instance }} is unavailable'
+          description: 'The dedicated Redis Exporter cannot reach its approved Redis instance for {{ $labels.codestra_business }}.'
+          runbook_url: https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/runtime-v1/RUNBOOKS.md#codestraredisunavailable
+      - alert: CodestraRedisEvictions
+        expr: rate(redis_evicted_keys_total[5m]) > 0
+        for: 10m
+        labels:
+          severity: warning
+          owner: platform-data
+          notification_class: capacity
+        annotations:
+          summary: 'Redis instance {{ $labels.redis_instance }} is evicting keys'
+          description: 'Sustained evictions indicate memory pressure or an incorrect maxmemory policy.'
+          runbook_url: https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/runtime-v1/RUNBOOKS.md#codestraredisevictions
+
+  - name: codestra.corporate.recovery-and-certificates
+    interval: 60s
+    rules:
+      - alert: CodestraBackupStale
+        expr: codestra:backup_age_seconds > 93600
+        for: 30m
+        labels:
+          severity: warning
+          owner: platform-reliability
+          notification_class: recovery-readiness
+        annotations:
+          summary: '{{ $labels.class }} backup evidence is stale'
+          description: 'No successful {{ $labels.class }} backup has been recorded for more than 26 hours on {{ $labels.server }}.'
+          runbook_url: https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/runtime-v1/RUNBOOKS.md#codestrabackupstale
+      - alert: CodestraRestoreValidationStale
+        expr: |
+          (codestra:restore_validation_age_seconds > 604800)
+          or
+          (
+            max by (codestra_business, application, service, environment, server) (
+              codestra_backup_last_success_timestamp_seconds
+            )
+            unless on (codestra_business, application, service, environment, server)
+            max by (codestra_business, application, service, environment, server) (
+              codestra_restore_validation_last_success_timestamp_seconds
+            )
+          )
+        for: 1h
+        labels:
+          severity: high
+          owner: platform-reliability
+          notification_class: recovery-readiness
+        annotations:
+          summary: Restore-validation evidence is older than seven days
+          description: 'Recovery proof for {{ $labels.service }} on {{ $labels.server }} is stale or missing.'
+          runbook_url: https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/runtime-v1/RUNBOOKS.md#codestrarestorevalidationstale
+      - alert: CodestraConfigurationDrift
+        expr: codestra_configuration_drift == 1
+        for: 10m
+        labels:
+          severity: high
+          owner: platform-reliability
+          notification_class: configuration
+        annotations:
+          summary: Reviewed configuration differs from deployed state
+          description: 'Configuration drift is present for {{ $labels.service }} on {{ $labels.server }}.'
+          runbook_url: https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/runtime-v1/RUNBOOKS.md#codestraconfigurationdrift
+      - alert: CodestraCertificateExpiringSoon
+        expr: codestra:certificate_seconds_to_expiry < 1814400
+        for: 30m
+        labels:
+          severity: warning
+          owner: platform-security
+          notification_class: certificate
+        annotations:
+          summary: '{{ $labels.class }} certificate expires within 21 days'
+          description: 'Certificate renewal evidence is required for {{ $labels.service }} on {{ $labels.server }}.'
+          runbook_url: https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/runtime-v1/RUNBOOKS.md#codestracertificateexpiringsoon
+      - alert: CodestraCertificateExpiringCritical
+        expr: codestra:certificate_seconds_to_expiry < 604800
+        for: 15m
+        labels:
+          severity: high
+          owner: platform-security
+          notification_class: certificate
+        annotations:
+          summary: '{{ $labels.class }} certificate expires within seven days'
+          description: 'Immediate renewal or traffic-migration action is required for {{ $labels.service }} on {{ $labels.server }}.'
+          runbook_url: https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/runtime-v1/RUNBOOKS.md#codestracertificateexpiringcritical
+      - alert: CodestraProbeCertificateExpiringSoon
+        expr: codestra:probe_certificate_seconds_to_expiry < 1814400
+        for: 30m
+        labels:
+          severity: warning
+          owner: platform-security
+          notification_class: certificate
+        annotations:
+          summary: 'Public certificate for {{ $labels.instance }} expires within 21 days'
+          description: 'Blackbox Exporter detected an approaching TLS expiry for {{ $labels.codestra_business }}.'
+          runbook_url: https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/runtime-v1/RUNBOOKS.md#codestraprobecertificateexpiringsoon

@@ -1,0 +1,202 @@
+groups:
+  - name: codestra-application-availability
+    rules:
+      - alert: CodestraApplicationTargetDown
+        expr: up{job="codestra-targets",job_class=~"edge|gateway|backend|identity|automation|erp|observability"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          owner: codestra-platform
+          codestra_business: "{{ $labels.codestra_business }}"
+          service: "{{ $labels.service }}"
+          environment: "{{ $labels.environment }}"
+        annotations:
+          summary: "{{ $labels.codestra_business }}/{{ $labels.service }} is not scrapeable"
+          description: "Prometheus cannot scrape {{ $labels.instance }} on {{ $labels.server }} in {{ $labels.environment }}."
+          runbook_url: "https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#notification-failures"
+
+      - alert: CodestraHighHttpErrorRatio
+        expr: (codestra:http_error_ratio:5m > 0.05) and on (codestra_business, environment, region, deployment, server, application, service) (codestra:http_requests:rate5m > 0.2)
+        for: 10m
+        labels:
+          severity: critical
+          owner: codestra-application
+          codestra_business: "{{ $labels.codestra_business }}"
+          service: "{{ $labels.service }}"
+          environment: "{{ $labels.environment }}"
+        annotations:
+          summary: "High 5xx ratio for {{ $labels.codestra_business }}/{{ $labels.service }}"
+          description: "5xx ratio has exceeded 5% for ten minutes."
+          runbook_url: "https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#slo-fast-burn"
+
+      - alert: CodestraHighHttpLatency
+        expr: codestra:http_duration_seconds:p95_5m > 2
+        for: 10m
+        labels:
+          severity: warning
+          owner: codestra-application
+          codestra_business: "{{ $labels.codestra_business }}"
+          service: "{{ $labels.service }}"
+          environment: "{{ $labels.environment }}"
+        annotations:
+          summary: "High HTTP latency for {{ $labels.codestra_business }}/{{ $labels.service }}"
+          description: "p95 HTTP duration has exceeded two seconds."
+          runbook_url: "https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#slo-slow-burn"
+
+      - alert: CodestraDependencyLatencyHigh
+        expr: codestra:dependency_latency_seconds:p95_5m > 1
+        for: 10m
+        labels:
+          severity: warning
+          owner: codestra-application
+          codestra_business: "{{ $labels.codestra_business }}"
+          service: "{{ $labels.service }}"
+          environment: "{{ $labels.environment }}"
+        annotations:
+          summary: "Dependency latency is high for {{ $labels.codestra_business }}/{{ $labels.service }}"
+          description: "Dependency {{ $labels.dependency }} p95 latency is above one second."
+          runbook_url: "https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#slo-slow-burn"
+
+      - alert: CodestraDatabaseLatencyHigh
+        expr: codestra:database_latency_seconds:p95_5m > 0.5
+        for: 10m
+        labels:
+          severity: warning
+          owner: codestra-application
+          codestra_business: "{{ $labels.codestra_business }}"
+          service: "{{ $labels.service }}"
+          environment: "{{ $labels.environment }}"
+        annotations:
+          summary: "Database latency is high for {{ $labels.codestra_business }}/{{ $labels.service }}"
+          description: "Database operation {{ $labels.operation }} p95 latency is above 500 ms."
+          runbook_url: "https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#slo-slow-burn"
+
+  - name: codestra-application-backlogs
+    rules:
+      - alert: CodestraQueueDepthHigh
+        expr: codestra:queue_depth:max > 1000
+        for: 10m
+        labels:
+          severity: warning
+          owner: codestra-application
+          codestra_business: "{{ $labels.codestra_business }}"
+          service: "{{ $labels.service }}"
+          environment: "{{ $labels.environment }}"
+        annotations:
+          summary: "Queue {{ $labels.queue }} is backing up"
+          description: "Queue depth is above 1000 for {{ $labels.codestra_business }}/{{ $labels.service }}."
+          runbook_url: "https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#slo-slow-burn"
+
+      - alert: CodestraWorkerFailures
+        expr: codestra:worker_failures:rate5m > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          owner: codestra-application
+          codestra_business: "{{ $labels.codestra_business }}"
+          service: "{{ $labels.service }}"
+          environment: "{{ $labels.environment }}"
+        annotations:
+          summary: "Worker failures detected for {{ $labels.worker }}"
+          description: "Worker failures exceed 0.05/s for five minutes."
+          runbook_url: "https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#slo-fast-burn"
+
+      - alert: CodestraOutboxBacklogHigh
+        expr: (codestra:outbox_backlog:max > 500) or (codestra:outbox_oldest_age_seconds:max > 600)
+        for: 10m
+        labels:
+          severity: critical
+          owner: codestra-integration
+          codestra_business: "{{ $labels.codestra_business }}"
+          service: "{{ $labels.service }}"
+          environment: "{{ $labels.environment }}"
+        annotations:
+          summary: "Outbox backlog is unhealthy for {{ $labels.codestra_business }}/{{ $labels.service }}"
+          description: "Backlog count or oldest age has crossed the production threshold."
+          runbook_url: "https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#slo-fast-burn"
+
+      - alert: CodestraInboxBacklogHigh
+        expr: (codestra:inbox_backlog:max > 500) or (codestra:inbox_oldest_age_seconds:max > 600)
+        for: 10m
+        labels:
+          severity: critical
+          owner: codestra-integration
+          codestra_business: "{{ $labels.codestra_business }}"
+          service: "{{ $labels.service }}"
+          environment: "{{ $labels.environment }}"
+        annotations:
+          summary: "Inbox backlog is unhealthy for {{ $labels.codestra_business }}/{{ $labels.service }}"
+          description: "Backlog count or oldest age has crossed the production threshold."
+          runbook_url: "https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#slo-fast-burn"
+
+      - alert: CodestraWebhookDeliveryDegraded
+        expr: (codestra:webhook_delivery_success_ratio:5m < 0.95) and on (codestra_business, environment, region, deployment, application, service, provider) (sum without (result) (codestra:webhook_deliveries:rate5m) > 0.1)
+        for: 10m
+        labels:
+          severity: critical
+          owner: codestra-integration
+          codestra_business: "{{ $labels.codestra_business }}"
+          service: "{{ $labels.service }}"
+          environment: "{{ $labels.environment }}"
+        annotations:
+          summary: "Webhook delivery degraded for provider {{ $labels.provider }}"
+          description: "Webhook success ratio is below 95%."
+          runbook_url: "https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#slo-fast-burn"
+
+      - alert: CodestraWebhookRetriesElevated
+        expr: codestra:webhook_retries:rate5m > 0.1
+        for: 10m
+        labels:
+          severity: warning
+          owner: codestra-integration
+          codestra_business: "{{ $labels.codestra_business }}"
+          service: "{{ $labels.service }}"
+          environment: "{{ $labels.environment }}"
+        annotations:
+          summary: "Webhook retries elevated for provider {{ $labels.provider }}"
+          description: "Webhook retry rate exceeds 0.1/s for {{ $labels.codestra_business }}/{{ $labels.service }}."
+          runbook_url: "https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#slo-slow-burn"
+
+  - name: codestra-operations-dashboard-api
+    rules:
+      - alert: CodestraOperationsDashboardApiErrors
+        expr: (codestra:operations_dashboard_error_ratio:5m > 0.05) and on (codestra_business, environment, region, deployment, server, application, service, operation) (codestra:operations_dashboard_requests:rate5m > 0.05)
+        for: 10m
+        labels:
+          severity: critical
+          owner: codestra-platform
+          codestra_business: "{{ $labels.codestra_business }}"
+          service: "{{ $labels.service }}"
+          environment: "{{ $labels.environment }}"
+        annotations:
+          summary: "Operations dashboard API errors are high for {{ $labels.service }}"
+          description: "The read-only operations dashboard endpoint {{ $labels.operation }} has a 5xx ratio above 5%."
+          runbook_url: "https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#operations-dashboard-api"
+
+      - alert: CodestraOperationsDashboardApiLatencyHigh
+        expr: codestra:operations_dashboard_duration_seconds:p95_5m > 2
+        for: 10m
+        labels:
+          severity: warning
+          owner: codestra-platform
+          codestra_business: "{{ $labels.codestra_business }}"
+          service: "{{ $labels.service }}"
+          environment: "{{ $labels.environment }}"
+        annotations:
+          summary: "Operations dashboard API latency is high for {{ $labels.service }}"
+          description: "The read-only operations dashboard endpoint {{ $labels.operation }} has p95 latency above two seconds."
+          runbook_url: "https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#operations-dashboard-api"
+
+      - alert: CodestraOperationsDashboardAuthFailures
+        expr: codestra:operations_dashboard_auth_failures:rate5m > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          owner: codestra-security
+          codestra_business: "{{ $labels.codestra_business }}"
+          service: "{{ $labels.service }}"
+          environment: "{{ $labels.environment }}"
+        annotations:
+          summary: "Operations dashboard auth failures detected for {{ $labels.service }}"
+          description: "Read-only dashboard authentication failures are above threshold; verify monitoring-readonly token scope and gateway enforcement."
+          runbook_url: "https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#operations-dashboard-api"

@@ -1,0 +1,78 @@
+{
+  "authorityRole": "metrics-slo-alert-evaluation-authority",
+  "canonicalHostname": "prom.codestra.media",
+  "component": "prometheus",
+  "contractId": "codestra.observability.prometheus.v1",
+  "correlation": {
+    "indexedFields": ["codestra_business", "application", "service", "environment", "server", "region", "deployment"],
+    "propagateHeaders": ["X-Correlation-ID", "traceparent"],
+    "protectedNonIndexedFields": ["request_id", "trace_id", "tenant_id"],
+    "structuredFields": ["correlation_id", "request_id", "trace_id", "tenant_id"]
+  },
+  "deploymentClass": "central",
+  "displayName": "Prometheus",
+  "integrations": [
+    {"direction": "outbound", "mutating": false, "peer": "alertmanager", "protocol": "http", "purpose": "send evaluated alerts", "signal": "alerts"},
+    {"direction": "inbound", "mutating": false, "peer": "grafana", "protocol": "prometheus-http-api", "purpose": "serve metrics and SLO queries", "signal": "metrics"},
+    {"direction": "inbound", "mutating": false, "peer": "opentelemetry", "protocol": "prometheus-scrape", "purpose": "scrape normalized application metrics", "signal": "metrics"},
+    {"direction": "inbound", "mutating": false, "peer": "node-exporter", "protocol": "prometheus-scrape", "purpose": "scrape host metrics", "signal": "metrics"},
+    {"direction": "inbound", "mutating": false, "peer": "cadvisor", "protocol": "prometheus-scrape", "purpose": "scrape container metrics", "signal": "metrics"},
+    {"direction": "inbound", "mutating": false, "peer": "redis-exporter", "protocol": "prometheus-scrape", "purpose": "scrape Redis metrics", "signal": "metrics"},
+    {"direction": "inbound", "mutating": false, "peer": "postgres-exporter", "protocol": "prometheus-scrape", "purpose": "scrape PostgreSQL metrics", "signal": "metrics"},
+    {"direction": "inbound", "mutating": false, "peer": "blackbox-exporter", "protocol": "prometheus-scrape", "purpose": "scrape synthetic probe evidence", "signal": "metrics"}
+  ],
+  "managementReadback": {
+    "allowsMutation": false,
+    "controlApiOwner": "appolon1908-hue/Codestra-Telemetry",
+    "exposesSecretValues": false,
+    "healthOperationId": "health",
+    "readinessOperationId": "readiness",
+    "registryServiceId": "prometheus",
+    "responseBodyPolicy": "discard"
+  },
+  "nativeApi": {
+    "authentication": {
+      "callerControlledBusinessAllowed": false,
+      "credentialSource": "secret_file",
+      "requiredScopes": ["observability.read"],
+      "tenantHeader": null,
+      "transport": "private_mtls"
+    },
+    "baseUrlEnvironment": "CODESTRA_PROMETHEUS_URL",
+    "operations": [
+      {"acceptedStatuses": [200], "access": "read_only", "category": "health", "controlPlaneProxyAllowed": false, "id": "health", "method": "GET", "path": "/-/healthy", "responseBodyPolicy": "discard", "timeoutMs": 3000},
+      {"acceptedStatuses": [200], "access": "read_only", "category": "readiness", "controlPlaneProxyAllowed": false, "id": "readiness", "method": "GET", "path": "/-/ready", "responseBodyPolicy": "discard", "timeoutMs": 3000},
+      {"acceptedStatuses": [200], "access": "read_only", "category": "metrics", "controlPlaneProxyAllowed": false, "id": "metrics", "method": "GET", "path": "/metrics", "responseBodyPolicy": "discard", "timeoutMs": 3000},
+      {"acceptedStatuses": [200], "access": "read_only", "category": "query", "controlPlaneProxyAllowed": false, "id": "targets", "method": "GET", "path": "/api/v1/targets", "responseBodyPolicy": "native", "timeoutMs": 3000},
+      {"acceptedStatuses": [200], "access": "read_only", "category": "query", "controlPlaneProxyAllowed": false, "id": "rules", "method": "GET", "path": "/api/v1/rules", "responseBodyPolicy": "native", "timeoutMs": 3000},
+      {"acceptedStatuses": [200], "access": "read_only", "category": "query", "controlPlaneProxyAllowed": false, "id": "alerts", "method": "GET", "path": "/api/v1/alerts", "responseBodyPolicy": "native", "timeoutMs": 3000},
+      {"acceptedStatuses": [200], "access": "read_only", "category": "query", "controlPlaneProxyAllowed": false, "id": "query", "method": "GET", "path": "/api/v1/query", "responseBodyPolicy": "native", "timeoutMs": 3000},
+      {"acceptedStatuses": [200], "access": "read_only", "category": "query", "controlPlaneProxyAllowed": false, "id": "query-range", "method": "GET", "path": "/api/v1/query_range", "responseBodyPolicy": "native", "timeoutMs": 3000}
+    ]
+  },
+  "nativeExposure": "internal_private",
+  "release": {
+    "imageDigestEnvironment": "CODESTRA_PROMETHEUS_IMAGE_DIGEST",
+    "immutableImageRequired": true,
+    "sourceRevisionEnvironment": "CODESTRA_PROMETHEUS_SOURCE_REVISION"
+  },
+  "repository": "appolon1908-hue/Codestra-Prometheus",
+  "safety": {
+    "anonymousManagementAccessAllowed": false,
+    "callerControlledBusinessAllowed": false,
+    "crossBusinessDefaultAllowed": false,
+    "insecureTlsVerificationAllowed": false,
+    "mutationProxyEnabled": false,
+    "nativeApiProxyEnabled": false,
+    "runtimeActivationAuthorized": false,
+    "secretValueReadbackEnabled": false
+  },
+  "schemaAuthority": {
+    "path": "codestra/api/service-contract.schema.json",
+    "repository": "appolon1908-hue/Codestra-Telemetry",
+    "sourceRevision": "c35d880a730ca5206d445e8a9a688cb465ae2ad4",
+    "version": "1.0.0"
+  },
+  "schemaVersion": "1.0.0",
+  "signals": {"consumes": ["metrics"], "produces": ["metrics", "alerts"]}
+}

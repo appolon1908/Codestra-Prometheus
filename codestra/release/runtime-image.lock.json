@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "1.0.0",
+  "artifactModel": "verified-upstream-image-plus-signed-config",
+  "upstreamRepository": "prometheus/prometheus",
+  "upstreamVersion": "v3.5.0",
+  "upstreamTagCommit": "8be3a9560fbdd18a94dedec4b747c35178177202",
+  "image": "docker.io/prom/prometheus@sha256:63805ebb8d2b3920190daf1cb14a60871b16fd38bed42b857a3182bc621f4996",
+  "linuxAmd64Manifest": "sha256:8672a850efe2f9874702406c8318704edb363587f8c2ca88586b4c8fdb5cea24",
+  "upstreamSignature": {
+    "available": false,
+    "verification": "NO_SIGSTORE_SIGNATURE_PUBLISHED"
+  },
+  "productionActivation": false
+}

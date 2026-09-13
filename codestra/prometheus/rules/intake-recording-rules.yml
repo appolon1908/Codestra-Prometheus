@@ -1,0 +1,36 @@
+groups:
+  - name: codestra-intake-recording
+    interval: 30s
+    rules:
+      - record: codestra:intake_lead_submissions:rate5m
+        expr: sum by (codestra_business, application, service, environment, channel, form_kind, result) (rate(lead_submissions_total[5m]))
+      - record: codestra:intake_lead_duplicates:rate5m
+        expr: sum by (codestra_business, application, service, environment, channel, form_kind) (rate(lead_duplicates_total[5m]))
+      - record: codestra:intake_lead_duplicate_ratio:5m
+        expr: sum by (codestra_business, application, service, environment, channel, form_kind) (rate(lead_duplicates_total[5m])) / clamp_min(sum by (codestra_business, application, service, environment, channel, form_kind) (rate(lead_submissions_total[5m])), 0.001)
+      - record: codestra:intake_lead_validation_failures:rate5m
+        expr: sum by (codestra_business, application, service, environment, channel, form_kind, reason) (rate(lead_validation_failures_total[5m]))
+      - record: codestra:intake_lead_processing_duration_seconds:p95_5m
+        expr: histogram_quantile(0.95, sum by (le, codestra_business, application, service, environment, channel, form_kind) (rate(lead_processing_duration_seconds_bucket[5m])))
+      - record: codestra:intake_odoo_deliveries:rate5m
+        expr: sum by (codestra_business, application, service, environment, result) (rate(lead_odoo_delivery_total[5m]))
+      - record: codestra:intake_odoo_delivery_failures:rate5m
+        expr: sum by (codestra_business, application, service, environment, reason) (rate(lead_odoo_delivery_failures_total[5m]))
+      - record: codestra:intake_odoo_delivery_success_ratio:5m
+        expr: sum by (codestra_business, application, service, environment) (rate(lead_odoo_delivery_total{result="success"}[5m])) / clamp_min(sum by (codestra_business, application, service, environment) (rate(lead_odoo_delivery_total[5m])), 0.001)
+      - record: codestra:intake_survey_responses:rate5m
+        expr: sum by (codestra_business, application, service, environment, channel, survey_kind, result, anonymous) (rate(survey_responses_total[5m]))
+      - record: codestra:intake_survey_validation_failures:rate5m
+        expr: sum by (codestra_business, application, service, environment, channel, survey_kind, reason) (rate(survey_validation_failures_total[5m]))
+      - record: codestra:intake_survey_processing_duration_seconds:p95_5m
+        expr: histogram_quantile(0.95, sum by (le, codestra_business, application, service, environment, channel, survey_kind) (rate(survey_processing_duration_seconds_bucket[5m])))
+      - record: codestra:intake_inbox_backlog:max
+        expr: max by (codestra_business, application, service, environment) (intake_inbox_backlog)
+      - record: codestra:intake_outbox_backlog:max
+        expr: max by (codestra_business, application, service, environment, delivery_target) (intake_outbox_backlog)
+      - record: codestra:intake_oldest_pending_seconds:max
+        expr: max by (codestra_business, application, service, environment, queue) (intake_oldest_pending_seconds)
+      - record: codestra:intake_rate_limit_rejections:rate5m
+        expr: sum by (codestra_business, application, service, environment, channel) (rate(intake_rate_limit_rejections_total[5m]))
+      - record: codestra:intake_spam_rejections:rate5m
+        expr: sum by (codestra_business, application, service, environment, channel, reason) (rate(intake_spam_rejections_total[5m]))

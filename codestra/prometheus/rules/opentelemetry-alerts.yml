@@ -1,0 +1,84 @@
+groups:
+  - name: codestra-opentelemetry-recording
+    interval: 30s
+    rules:
+      - record: codestra:otel_receiver_refused_items:rate5m
+        expr: sum by (codestra_business, environment, region, deployment, server, application, service, receiver, transport) (rate({__name__=~"otelcol_receiver_refused_(spans|metric_points|log_records)_total"}[5m]))
+      - record: codestra:otel_exporter_enqueue_failures:rate5m
+        expr: sum by (codestra_business, environment, region, deployment, server, application, service, exporter) (rate({__name__=~"otelcol_exporter_enqueue_failed_(spans|metric_points|log_records)_total"}[5m]))
+      - record: codestra:otel_exporter_send_failures:rate5m
+        expr: sum by (codestra_business, environment, region, deployment, server, application, service, exporter) (rate({__name__=~"otelcol_exporter_send_failed_(spans|metric_points|log_records)_total"}[5m]))
+      - record: codestra:otel_exporter_queue_utilization:max
+        expr: max by (codestra_business, environment, region, deployment, server, application, service, exporter) (otelcol_exporter_queue_size / clamp_min(otelcol_exporter_queue_capacity, 1))
+
+  - name: codestra-opentelemetry-health
+    rules:
+      - alert: CodestraOtelApplicationMetricsTargetDown
+        expr: up{job="otel-application-metrics"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          owner: codestra-observability
+          codestra_business: platform
+          service: opentelemetry-ingest
+          environment: "{{ $labels.environment }}"
+        annotations:
+          summary: "OpenTelemetry application metrics scrape is down"
+          description: "Prometheus cannot scrape the sanitized Collector application-metrics endpoint on port 8889."
+          runbook_url: "https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#notification-failures"
+
+      - alert: CodestraOtelReceiverRefusedData
+        expr: codestra:otel_receiver_refused_items:rate5m > 0
+        for: 5m
+        labels:
+          severity: critical
+          owner: codestra-observability
+          codestra_business: platform
+          service: opentelemetry-collector
+          environment: "{{ $labels.environment }}"
+        annotations:
+          summary: "OpenTelemetry Collector is refusing incoming telemetry"
+          description: "Receiver {{ $labels.receiver }} has refused telemetry for five minutes; clients may experience telemetry loss."
+          runbook_url: "https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#notification-failures"
+
+      - alert: CodestraOtelExporterEnqueueFailures
+        expr: codestra:otel_exporter_enqueue_failures:rate5m > 0
+        for: 2m
+        labels:
+          severity: critical
+          owner: codestra-observability
+          codestra_business: platform
+          service: opentelemetry-collector
+          environment: "{{ $labels.environment }}"
+        annotations:
+          summary: "OpenTelemetry Collector exporter queue is dropping telemetry"
+          description: "Exporter {{ $labels.exporter }} cannot enqueue telemetry; queue saturation may cause telemetry loss."
+          runbook_url: "https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#notification-failures"
+
+      - alert: CodestraOtelExporterSendFailures
+        expr: codestra:otel_exporter_send_failures:rate5m > 0
+        for: 10m
+        labels:
+          severity: high
+          owner: codestra-observability
+          codestra_business: platform
+          service: opentelemetry-collector
+          environment: "{{ $labels.environment }}"
+        annotations:
+          summary: "OpenTelemetry Collector exporter delivery is failing"
+          description: "Exporter {{ $labels.exporter }} has sustained send failures for ten minutes; retries may still be active."
+          runbook_url: "https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#notification-failures"
+
+      - alert: CodestraOtelExporterQueueNearCapacity
+        expr: codestra:otel_exporter_queue_utilization:max > 0.80
+        for: 10m
+        labels:
+          severity: warning
+          owner: codestra-observability
+          codestra_business: platform
+          service: opentelemetry-collector
+          environment: "{{ $labels.environment }}"
+        annotations:
+          summary: "OpenTelemetry Collector exporter queue is near capacity"
+          description: "Exporter {{ $labels.exporter }} queue has remained above 80% utilization for ten minutes."
+          runbook_url: "https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#head-series-capacity"

@@ -1,61 +1,101 @@
-name: Codestra Upstream Source Sync
+name: Validate Prometheus upstream source authority
 
 on:
-  push:
-    branches: [main]
+  pull_request:
     paths:
       - CODESTRA_UPSTREAM.json
+      - CODESTRA_UPSTREAM_LOCK.json
+      - upstream/**
+      - scripts/validate_source_authority.py
+      - scripts/validate_repository_readiness.py
       - .github/workflows/upstream-source-sync.yml
+      - .github/workflows/codestra-observability.yml
+      - .github/workflows/validate-codestra-corporate-runtime-v1.yml
+  push:
+    branches:
+      - main
+      - development
+      - test
+      - staging
+      - production
+    paths:
+      - CODESTRA_UPSTREAM.json
+      - CODESTRA_UPSTREAM_LOCK.json
+      - upstream/**
+      - scripts/validate_source_authority.py
+      - scripts/validate_repository_readiness.py
+      - .github/workflows/upstream-source-sync.yml
+      - .github/workflows/codestra-observability.yml
+      - .github/workflows/validate-codestra-corporate-runtime-v1.yml
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
-  group: codestra-upstream-source-sync
-  cancel-in-progress: false
+  group: codestra-upstream-source-authority-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  sync:
-    if: github.actor != 'github-actions[bot]'
-    runs-on: ubuntu-latest
-    timeout-minutes: 120
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
     steps:
-      - name: Checkout Codestra authority
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Check out exact head
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
-      - name: Import official upstream source snapshot
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: "3.13"
+
+      - name: Validate local source and runtime authority
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha || github.sha }}"
+          python scripts/validate_source_authority.py
+          test "$(git rev-parse HEAD:upstream)" = "9f3cc4b95e5d0ea24656c2c237a13aa26aa62f29"
+
+      - name: Verify exact source commit and tree against official upstream
         shell: bash
         run: |
           set -Eeuo pipefail
-          mapfile -t values < <(python3 - <<'PY'
+          mapfile -t values < <(python - <<'PY'
           import json
           from pathlib import Path
-          data=json.loads(Path('CODESTRA_UPSTREAM.json').read_text())
-          print(data['upstream_clone_url']); print(data['upstream_ref']); print(data['import_path'])
+          source = json.loads(Path("CODESTRA_UPSTREAM.json").read_text(encoding="utf-8"))
+          print(source["upstream_clone_url"])
+          print(source["trusted_upstream_ref"])
+          print(source["upstream_ref"])
+          print(source["upstream_tree"])
           PY
           )
-          UPSTREAM_URL="${values[0]}"; UPSTREAM_REF="${values[1]}"; IMPORT_PATH="${values[2]}"
-          [[ "$UPSTREAM_URL" == https://github.com/*.git ]] || exit 2
-          [[ "$IMPORT_PATH" == upstream ]] || exit 2
-          rm -rf .codestra-upstream-src "$IMPORT_PATH"
-          GIT_LFS_SKIP_SMUDGE=1 git clone --depth 1 --branch "$UPSTREAM_REF" "$UPSTREAM_URL" .codestra-upstream-src
-          UPSTREAM_SHA="$(git -C .codestra-upstream-src rev-parse HEAD)"
-          rm -rf .codestra-upstream-src/.git
-          mv .codestra-upstream-src "$IMPORT_PATH"
-          export UPSTREAM_URL UPSTREAM_REF UPSTREAM_SHA
-          python3 - <<'PY'
-          import json, os
-          from datetime import datetime, timezone
-          from pathlib import Path
-          Path('CODESTRA_UPSTREAM_LOCK.json').write_text(json.dumps({'schema_version':'1.0','upstream_clone_url':os.environ['UPSTREAM_URL'],'upstream_ref':os.environ['UPSTREAM_REF'],'upstream_commit':os.environ['UPSTREAM_SHA'],'import_path':'upstream','synchronized_at':datetime.now(timezone.utc).isoformat(),'deployment_enabled':False}, indent=2)+'\n')
-          PY
-          git config user.name 'codestra-upstream-sync'
-          git config user.email 'github-actions[bot]@users.noreply.github.com'
-          git add -A upstream CODESTRA_UPSTREAM_LOCK.json
-          git diff --cached --quiet && exit 0
-          git commit -m "vendor: sync official upstream ${UPSTREAM_SHA}"
-          git push origin HEAD:main
-          git push origin HEAD:staging
-          git push origin HEAD:production
+          upstream_url="${values[0]}"
+          trusted_ref="${values[1]}"
+          upstream_ref="${values[2]}"
+          upstream_tree="${values[3]}"
+          [[ "$upstream_url" == "https://github.com/prometheus/prometheus.git" ]]
+          [[ "$trusted_ref" == "refs/heads/main" ]]
+          [[ "$upstream_ref" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$upstream_tree" =~ ^[0-9a-f]{40}$ ]]
+
+          worktree="$(mktemp -d)"
+          trap 'rm -rf -- "$worktree"' EXIT
+          git init --quiet "$worktree"
+          git -C "$worktree" remote add origin "$upstream_url"
+          GIT_LFS_SKIP_SMUDGE=1 git -C "$worktree" fetch \
+            --filter=blob:none --no-tags origin \
+            "${trusted_ref}:refs/remotes/origin/codestra-trusted"
+          git -C "$worktree" cat-file -e "${upstream_ref}^{commit}"
+          git -C "$worktree" merge-base --is-ancestor \
+            "$upstream_ref" refs/remotes/origin/codestra-trusted
+          test "$(git -C "$worktree" show -s --format=%T "$upstream_ref")" = "$upstream_tree"
+          test "$(git rev-parse HEAD:upstream)" = "$upstream_tree"
+
+      - name: Confirm runtime validator remains digest pinned
+        run: |
+          grep -F 'docker.io/prom/prometheus@sha256:63805ebb8d2b3920190daf1cb14a60871b16fd38bed42b857a3182bc621f4996' .github/workflows/codestra-observability.yml
+          grep -F 'docker.io/prom/prometheus@sha256:63805ebb8d2b3920190daf1cb14a60871b16fd38bed42b857a3182bc621f4996' .github/workflows/validate-codestra-corporate-runtime-v1.yml

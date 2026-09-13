@@ -1,0 +1,93 @@
+{
+  "schemaVersion": "1.0",
+  "status": "SOURCE_PREPARED_DISCOVERY_CONTROLLED",
+  "businesses": [
+    "codestra",
+    "moneybee",
+    "beyvra",
+    "breero",
+    "larim-a",
+    "transportation",
+    "booked4seasons",
+    "social",
+    "klyrow",
+    "telnexa",
+    "kyqra",
+    "restaurant",
+    "provisioning"
+  ],
+  "platformServices": [
+    "prometheus",
+    "loki",
+    "grafana",
+    "tempo",
+    "opentelemetry-collector",
+    "alloy",
+    "node-exporter",
+    "cadvisor",
+    "redis-exporter",
+    "blackbox-exporter",
+    "superset",
+    "openbao"
+  ],
+  "requiredTargetLabels": [
+    "codestra_business",
+    "application",
+    "service",
+    "environment",
+    "server",
+    "region",
+    "deployment",
+    "owner"
+  ],
+  "canonicalApplicationMetricFamilies": [
+    "codestra_api_requests_total",
+    "codestra_api_request_duration_seconds",
+    "codestra_dependency_request_duration_seconds",
+    "codestra_database_query_duration_seconds",
+    "codestra_queue_depth",
+    "codestra_queue_capacity",
+    "codestra_worker_failures_total",
+    "codestra_outbox_backlog",
+    "codestra_inbox_backlog",
+    "codestra_webhook_deliveries_total",
+    "codestra_webhook_retries_total",
+    "codestra_authentication_failures_total",
+    "codestra_authorization_denials_total",
+    "codestra_idempotency_conflicts_total",
+    "codestra_service_slo_target_ratio"
+  ],
+  "forbiddenMetricLabels": [
+    "tenant_id",
+    "customer_id",
+    "user_id",
+    "email",
+    "phone",
+    "request_id",
+    "correlation_id",
+    "trace_id",
+    "session_id",
+    "message_id",
+    "order_id",
+    "webhook_id",
+    "payment_id",
+    "trade_id"
+  ],
+  "discoveryRules": {
+    "source": "reviewed file_sd rendered from deployment inventory",
+    "hardCodedCustomerTargetsAllowed": false,
+    "unreviewedPublicTargetsAllowed": false,
+    "targetMustHaveOwner": true,
+    "targetMustHaveRunbook": true,
+    "targetMustHaveEnvironment": true,
+    "targetMustUseApprovedBusinessSlug": true,
+    "targetCredentialsInUrlAllowed": false,
+    "targetsActivatedByPullRequestOnly": true
+  },
+  "sensitiveBusinessBoundaries": {
+    "beyvra": "health, latency, market-data freshness, provider state, reconciliation state, and aggregate controls only; never credentials or trading authority",
+    "moneybee": "health, workflow SLA, aggregate funnel, and provider state only; never raw credit or identity records",
+    "klyrow": "aggregate delivery and queue metrics only; never message bodies or complete recipient addresses",
+    "telnexa": "aggregate delivery and provider metrics only; never SMS bodies or complete destination numbers"
+  }
+}

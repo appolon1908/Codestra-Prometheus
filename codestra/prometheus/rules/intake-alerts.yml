@@ -1,0 +1,152 @@
+groups:
+  - name: codestra-intake-alerts
+    rules:
+      - alert: CodestraIntakeLeadValidationFailureSpike
+        expr: sum without (reason) (codestra:intake_lead_validation_failures:rate5m) > 0.2
+        for: 10m
+        labels:
+          severity: warning
+          owner: codestra-integration
+          codestra_business: "{{ $labels.codestra_business }}"
+          service: "{{ $labels.service }}"
+          environment: "{{ $labels.environment }}"
+          event_family: intake
+        annotations:
+          summary: "Lead intake validation failures are elevated"
+          description: "Lead validation failures exceed 0.2 per second for ten minutes for {{ $labels.codestra_business }}/{{ $labels.service }}."
+          runbook_url: "https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/INTAKE-MONITORING.md#lead-validation-failures"
+
+      - alert: CodestraIntakeDuplicateRatioHigh
+        expr: codestra:intake_lead_duplicate_ratio:5m > 0.25
+        for: 15m
+        labels:
+          severity: warning
+          owner: codestra-integration
+          codestra_business: "{{ $labels.codestra_business }}"
+          service: "{{ $labels.service }}"
+          environment: "{{ $labels.environment }}"
+          event_family: intake
+        annotations:
+          summary: "Lead intake duplicate ratio is high"
+          description: "More than 25% of lead submissions are duplicates for {{ $labels.codestra_business }}/{{ $labels.service }}."
+          runbook_url: "https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/INTAKE-MONITORING.md#duplicate-ratio"
+
+      - alert: CodestraIntakeProcessingLatencyHigh
+        expr: codestra:intake_lead_processing_duration_seconds:p95_5m > 2
+        for: 10m
+        labels:
+          severity: warning
+          owner: codestra-integration
+          codestra_business: "{{ $labels.codestra_business }}"
+          service: "{{ $labels.service }}"
+          environment: "{{ $labels.environment }}"
+          event_family: intake
+        annotations:
+          summary: "Lead intake processing latency is high"
+          description: "p95 lead processing exceeds two seconds for {{ $labels.codestra_business }}/{{ $labels.service }}."
+          runbook_url: "https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/INTAKE-MONITORING.md#processing-latency"
+
+      - alert: CodestraIntakeOdooDeliveryDegraded
+        expr: (codestra:intake_odoo_delivery_success_ratio:5m < 0.95) and on (codestra_business, application, service, environment) (sum without (result) (codestra:intake_odoo_deliveries:rate5m) > 0.05)
+        for: 10m
+        labels:
+          severity: critical
+          owner: codestra-integration
+          codestra_business: "{{ $labels.codestra_business }}"
+          service: "{{ $labels.service }}"
+          environment: "{{ $labels.environment }}"
+          event_family: intake
+        annotations:
+          summary: "Odoo lead delivery is degraded"
+          description: "Odoo lead-delivery success is below 95% for {{ $labels.codestra_business }}/{{ $labels.service }}."
+          runbook_url: "https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/INTAKE-MONITORING.md#odoo-delivery"
+
+      - alert: CodestraIntakeInboxBacklogHigh
+        expr: codestra:intake_inbox_backlog:max > 500
+        for: 10m
+        labels:
+          severity: critical
+          owner: codestra-integration
+          codestra_business: "{{ $labels.codestra_business }}"
+          service: "{{ $labels.service }}"
+          environment: "{{ $labels.environment }}"
+          event_family: intake
+        annotations:
+          summary: "Intake durable inbox backlog is high"
+          description: "The intake inbox contains more than 500 pending records for {{ $labels.codestra_business }}/{{ $labels.service }}."
+          runbook_url: "https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/INTAKE-MONITORING.md#durable-backlog"
+
+      - alert: CodestraIntakeOutboxBacklogHigh
+        expr: codestra:intake_outbox_backlog:max > 500
+        for: 10m
+        labels:
+          severity: critical
+          owner: codestra-integration
+          codestra_business: "{{ $labels.codestra_business }}"
+          service: "{{ $labels.service }}"
+          environment: "{{ $labels.environment }}"
+          event_family: intake
+        annotations:
+          summary: "Intake delivery outbox backlog is high"
+          description: "The intake outbox contains more than 500 pending records for delivery target {{ $labels.delivery_target }}."
+          runbook_url: "https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/INTAKE-MONITORING.md#durable-backlog"
+
+      - alert: CodestraIntakeOldestPendingTooOld
+        expr: codestra:intake_oldest_pending_seconds:max > 600
+        for: 10m
+        labels:
+          severity: critical
+          owner: codestra-integration
+          codestra_business: "{{ $labels.codestra_business }}"
+          service: "{{ $labels.service }}"
+          environment: "{{ $labels.environment }}"
+          event_family: intake
+        annotations:
+          summary: "An intake item has remained pending too long"
+          description: "The oldest pending item in {{ $labels.queue }} is older than ten minutes."
+          runbook_url: "https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/INTAKE-MONITORING.md#durable-backlog"
+
+      - alert: CodestraSurveyValidationFailureSpike
+        expr: sum without (reason) (codestra:intake_survey_validation_failures:rate5m) > 0.1
+        for: 10m
+        labels:
+          severity: warning
+          owner: codestra-integration
+          codestra_business: "{{ $labels.codestra_business }}"
+          service: "{{ $labels.service }}"
+          environment: "{{ $labels.environment }}"
+          event_family: intake
+        annotations:
+          summary: "Survey validation failures are elevated"
+          description: "Survey validation failures exceed 0.1 per second for {{ $labels.codestra_business }}/{{ $labels.service }}."
+          runbook_url: "https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/INTAKE-MONITORING.md#survey-validation"
+
+      - alert: CodestraSurveyProcessingLatencyHigh
+        expr: codestra:intake_survey_processing_duration_seconds:p95_5m > 2
+        for: 10m
+        labels:
+          severity: warning
+          owner: codestra-integration
+          codestra_business: "{{ $labels.codestra_business }}"
+          service: "{{ $labels.service }}"
+          environment: "{{ $labels.environment }}"
+          event_family: intake
+        annotations:
+          summary: "Survey processing latency is high"
+          description: "p95 survey processing exceeds two seconds for {{ $labels.codestra_business }}/{{ $labels.service }}."
+          runbook_url: "https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/INTAKE-MONITORING.md#survey-processing"
+
+      - alert: CodestraIntakeRateLimitPressure
+        expr: codestra:intake_rate_limit_rejections:rate5m > 1
+        for: 10m
+        labels:
+          severity: warning
+          owner: codestra-edge
+          codestra_business: "{{ $labels.codestra_business }}"
+          service: "{{ $labels.service }}"
+          environment: "{{ $labels.environment }}"
+          event_family: intake
+        annotations:
+          summary: "Intake rate-limit pressure is elevated"
+          description: "The intake edge is rejecting more than one request per second for {{ $labels.codestra_business }}/{{ $labels.channel }}."
+          runbook_url: "https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/INTAKE-MONITORING.md#rate-limit-and-abuse"

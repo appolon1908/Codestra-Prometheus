@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "1.1",
+  "status": "CONTRACT_PREPARED_NOT_DEPLOYED",
+  "domain": "codestra-marketing-platform",
+  "services": ["kong","keycloak","middleware","marketing","ai","communication","social-control","social-runtime","n8n","odoo"],
+  "safeDimensions": ["codestra_business","application","service","environment","server","region","deployment","channel","provider","result","reason","status","capability","risk_class","mode","approval_state"],
+  "forbiddenLabelsOrPayloads": ["tenant_id","site_id","campaign_id","form_id","survey_id","question_id","customer_id","contact_id","lead_id","response_id","account_id","user_id","email","phone","name","address","message","message_id","request_id","workflow_id","execution_id","order_id","prompt","response_body","answers","custom_fields","consent_text","access_token","refresh_token","client_secret","idempotency_key","correlation_id","trace_id","span_id","raw_url","query_string","referrer","landing_page","sql_statement","container_id","pod_uid","exception_text","payload_content"],
+  "rawMetrics": ["codestra_http_requests_total","codestra_http_request_duration_seconds","codestra_service_errors_total","codestra_capability_state","middleware_inbox_backlog","middleware_outbox_backlog","middleware_dead_letter_total","marketing_sync_total","marketing_sync_failures_total","communication_dry_run_total","social_reconciliation_total","social_publish_blocked_total","n8n_workflow_failures_total","odoo_sync_total","ai_requests_total","ai_request_failures_total"],
+  "metricLabelRequirements": {
+    "codestra_http_requests_total": ["codestra_business","service","environment","status"],
+    "codestra_http_request_duration_seconds": ["codestra_business","service","environment","status"],
+    "codestra_capability_state": ["codestra_business","service","environment","capability","risk_class","mode","approval_state"]
+  },
+  "alerts": ["service_unavailable","elevated_5xx","latency_slo_breach","middleware_queue_stalled","dead_letter_growth","database_unavailable","gateway_unavailable","identity_unavailable","reconciliation_failure","dangerous_capability_enabled"],
+  "activation": {"runtimeApplied": false,"productionTargetsEnabled": false,"externalWritesEnabled": false}
+}

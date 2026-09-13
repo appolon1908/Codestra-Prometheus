@@ -1,0 +1,119 @@
+global:
+  scrape_interval: 15s
+  scrape_timeout: 10s
+  evaluation_interval: 15s
+  external_labels:
+    platform: codestra
+    codestra_business: platform
+    environment: production
+    region: hetzner-eu
+    deployment: production-current
+    prometheus_cluster: codestra-primary
+
+rule_files:
+  - /etc/prometheus/rules/*.yml
+
+alerting:
+  alert_relabel_configs:
+    - action: labeldrop
+      regex: prometheus_replica
+  alertmanagers:
+    - scheme: http
+      timeout: 10s
+      static_configs:
+        - targets: ["alertmanager:9093"]
+
+scrape_configs:
+  - job_name: prometheus
+    sample_limit: 100000
+    label_limit: 40
+    label_name_length_limit: 128
+    label_value_length_limit: 2048
+    body_size_limit: 64MB
+    static_configs:
+      - targets: ["127.0.0.1:9090"]
+        labels:
+          activation: active
+          job_class: observability
+          codestra_business: platform
+          environment: production
+          region: hetzner-eu
+          deployment: production-current
+          server: codestra-core-01
+          application: observability
+          service: prometheus
+          tenant_scope: aggregate
+
+  - job_name: codestra-targets
+    sample_limit: 250000
+    label_limit: 40
+    label_name_length_limit: 128
+    label_value_length_limit: 2048
+    body_size_limit: 64MB
+    file_sd_configs:
+      - files: ["/etc/prometheus/targets/production.json"]
+        refresh_interval: 30s
+    relabel_configs:
+      - source_labels: [activation]
+        regex: active
+        action: keep
+    metric_relabel_configs:
+      - action: labeldrop
+        regex: '(?i)^(tenant_id|tenant_name|organization_id|organization_name|customer_id|customer_name|account_id|user_id|user_name|email|phone|consumer|workspace|token|secret|password|session_id|request_id|correlation_id|trace_id|span_id|lead_id|order_id|message_id|workflow_id|execution_id|webhook_id|idempotency_key|raw_path|path|uri|url|query|query_string|client_address|network_peer_address|db_statement|http_target|http_url|url_full|service_instance_id|host_id|container_id|image_id|process_pid|pod_uid|exception_message|id)$'
+
+  - job_name: otel-application-metrics
+    honor_labels: true
+    sample_limit: 250000
+    label_limit: 40
+    label_name_length_limit: 128
+    label_value_length_limit: 2048
+    body_size_limit: 64MB
+    static_configs:
+      - targets: ["otel-collector:8889"]
+        labels:
+          activation: pending
+          job_class: backend
+          codestra_business: platform
+          environment: production
+          region: hetzner-eu
+          deployment: production-current
+          server: codestra-core-01
+          application: observability
+          service: opentelemetry-ingest
+          tenant_scope: aggregate
+    relabel_configs:
+      - source_labels: [activation]
+        regex: active
+        action: keep
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: 'target_info|otel_scope_info'
+        action: drop
+      - source_labels: [tenant_scope]
+        regex: aggregate
+        action: keep
+      - action: labeldrop
+        regex: '(?i)^(tenant_id|tenant_name|organization_id|organization_name|customer_id|customer_name|account_id|user_id|user_name|email|phone|consumer|workspace|token|secret|password|session_id|request_id|correlation_id|trace_id|span_id|lead_id|order_id|message_id|workflow_id|execution_id|webhook_id|idempotency_key|raw_path|path|uri|url|query|query_string|client_address|network_peer_address|db_statement|http_target|http_url|url_full|service_instance_id|host_id|container_id|image_id|process_pid|pod_uid|exception_message|codestra_application|service_name|deployment_environment_name|host_name|codestra_tenant_scope|id)$'
+
+  - job_name: blackbox
+    metrics_path: /probe
+    sample_limit: 50000
+    label_limit: 40
+    label_name_length_limit: 128
+    label_value_length_limit: 2048
+    body_size_limit: 16MB
+    params:
+      module: [https_2xx]
+    file_sd_configs:
+      - files: ["/etc/prometheus/blackbox-targets/*.json"]
+        refresh_interval: 30s
+    relabel_configs:
+      - source_labels: [probe_enabled]
+        regex: "true"
+        action: keep
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115

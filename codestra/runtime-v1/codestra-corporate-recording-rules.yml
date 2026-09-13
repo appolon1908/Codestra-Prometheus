@@ -1,0 +1,201 @@
+groups:
+  - name: codestra.corporate.api
+    interval: 30s
+    rules:
+      - record: codestra:api_request_rate5m
+        expr: |
+          sum by (codestra_business, application, service, environment) (
+            rate(codestra_api_requests_total[5m])
+          )
+      - record: codestra:api_error_rate5m
+        expr: |
+          sum by (codestra_business, application, service, environment) (
+            rate(codestra_api_requests_total{outcome="error"}[5m])
+          )
+      - record: codestra:api_error_ratio5m
+        expr: |
+          codestra:api_error_rate5m
+          /
+          clamp_min(codestra:api_request_rate5m, 0.001)
+      - record: codestra:api_request_rate1h
+        expr: |
+          sum by (codestra_business, application, service, environment) (
+            rate(codestra_api_requests_total[1h])
+          )
+      - record: codestra:api_error_rate1h
+        expr: |
+          sum by (codestra_business, application, service, environment) (
+            rate(codestra_api_requests_total{outcome="error"}[1h])
+          )
+      - record: codestra:api_error_ratio1h
+        expr: |
+          codestra:api_error_rate1h
+          /
+          clamp_min(codestra:api_request_rate1h, 0.001)
+      - record: codestra:api_latency_seconds:p50_5m
+        expr: |
+          histogram_quantile(
+            0.50,
+            sum by (codestra_business, application, service, environment, le) (
+              rate(codestra_api_request_duration_seconds_bucket[5m])
+            )
+          )
+      - record: codestra:api_latency_seconds:p95_5m
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum by (codestra_business, application, service, environment, le) (
+              rate(codestra_api_request_duration_seconds_bucket[5m])
+            )
+          )
+      - record: codestra:api_latency_seconds:p99_5m
+        expr: |
+          histogram_quantile(
+            0.99,
+            sum by (codestra_business, application, service, environment, le) (
+              rate(codestra_api_request_duration_seconds_bucket[5m])
+            )
+          )
+
+  - name: codestra.corporate.dependencies
+    interval: 30s
+    rules:
+      - record: codestra:dependency_latency_seconds:p95_5m
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum by (codestra_business, application, service, environment, dependency, le) (
+              rate(codestra_dependency_request_duration_seconds_bucket[5m])
+            )
+          )
+      - record: codestra:database_latency_seconds:p95_5m
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum by (codestra_business, application, service, environment, db_system, operation, le) (
+              rate(codestra_database_query_duration_seconds_bucket[5m])
+            )
+          )
+      - record: codestra:queue_depth:max
+        expr: |
+          max by (codestra_business, application, service, environment, queue) (
+            codestra_queue_depth
+          )
+      - record: codestra:queue_utilization_ratio:max
+        expr: |
+          max by (codestra_business, application, service, environment, queue) (
+            codestra_queue_depth
+            /
+            clamp_min(codestra_queue_capacity, 1)
+          )
+      - record: codestra:worker_failure_rate5m
+        expr: |
+          sum by (codestra_business, application, service, environment, worker_class) (
+            rate(codestra_worker_failures_total[5m])
+          )
+      - record: codestra:outbox_backlog:max
+        expr: |
+          max by (codestra_business, application, service, environment) (
+            codestra_outbox_backlog
+          )
+      - record: codestra:inbox_backlog:max
+        expr: |
+          max by (codestra_business, application, service, environment) (
+            codestra_inbox_backlog
+          )
+
+  - name: codestra.corporate.delivery-and-access
+    interval: 30s
+    rules:
+      - record: codestra:webhook_delivery_success_ratio5m
+        expr: |
+          sum by (codestra_business, application, service, environment, provider) (
+            rate(codestra_webhook_deliveries_total{outcome="success"}[5m])
+          )
+          /
+          clamp_min(
+            sum by (codestra_business, application, service, environment, provider) (
+              rate(codestra_webhook_deliveries_total[5m])
+            ),
+            0.001
+          )
+      - record: codestra:webhook_retry_rate5m
+        expr: |
+          sum by (codestra_business, application, service, environment, provider) (
+            rate(codestra_webhook_retries_total[5m])
+          )
+      - record: codestra:authentication_failure_rate5m
+        expr: |
+          sum by (codestra_business, application, service, environment, reason) (
+            rate(codestra_authentication_failures_total[5m])
+          )
+      - record: codestra:authorization_denial_rate5m
+        expr: |
+          sum by (codestra_business, application, service, environment, reason) (
+            rate(codestra_authorization_denials_total[5m])
+          )
+      - record: codestra:idempotency_conflict_rate5m
+        expr: |
+          sum by (codestra_business, application, service, environment, operation) (
+            rate(codestra_idempotency_conflicts_total[5m])
+          )
+
+  - name: codestra.corporate.slo
+    interval: 30s
+    rules:
+      - record: codestra:slo_error_budget_burn5m
+        expr: |
+          codestra:api_error_ratio5m
+          /
+          clamp_min(
+            1 - max by (codestra_business, application, service, environment) (
+              codestra_service_slo_target_ratio
+            ),
+            0.0001
+          )
+      - record: codestra:slo_error_budget_burn1h
+        expr: |
+          codestra:api_error_ratio1h
+          /
+          clamp_min(
+            1 - max by (codestra_business, application, service, environment) (
+              codestra_service_slo_target_ratio
+            ),
+            0.0001
+          )
+      - record: codestra:synthetic_availability_ratio5m
+        expr: |
+          avg by (codestra_business, application, service, environment) (
+            avg_over_time(probe_success[5m])
+          )
+
+  - name: codestra.corporate.infrastructure
+    interval: 60s
+    rules:
+      - record: codestra:host_cpu_utilization_ratio5m
+        expr: |
+          1 - avg by (codestra_business, application, environment, server, region) (
+            rate(node_cpu_seconds_total{mode="idle"}[5m])
+          )
+      - record: codestra:backup_age_seconds
+        expr: |
+          time()
+          - max by (codestra_business, application, service, environment, server, class) (
+              codestra_backup_last_success_timestamp_seconds
+            )
+      - record: codestra:restore_validation_age_seconds
+        expr: |
+          time()
+          - max by (codestra_business, application, service, environment, server) (
+              codestra_restore_validation_last_success_timestamp_seconds
+            )
+      - record: codestra:certificate_seconds_to_expiry
+        expr: |
+          min by (codestra_business, application, service, environment, server, class) (
+            codestra_certificate_expiry_timestamp_seconds - time()
+          )
+      - record: codestra:probe_certificate_seconds_to_expiry
+        expr: |
+          min by (codestra_business, application, service, environment, instance) (
+            probe_ssl_earliest_cert_expiry - time()
+          )

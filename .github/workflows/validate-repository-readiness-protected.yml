@@ -1,0 +1,33 @@
+name: Validate protected Prometheus source
+on:
+  push: {branches: [development, test, staging, production, main]}
+permissions: {contents: read}
+jobs:
+  validate-protected:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    env:
+      PROMETHEUS_IMAGE_REPOSITORY: prom/prometheus
+      PROMETHEUS_IMAGE_DIGEST: 63805ebb8d2b3920190daf1cb14a60871b16fd38bed42b857a3182bc621f4996
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with: {ref: "${{ github.sha }}", persist-credentials: false}
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with: {python-version: "3.13"}
+      - name: Validate evidence workflow semantics
+        run: |
+          docker run --rm --platform linux/amd64 \
+            --volume "$PWD:/repo:ro" --workdir /repo \
+            rhysd/actionlint@sha256:1d74bfc9fd1963af8f89a7c22afaaafd42f49aad711a09951d02cb996398f61d \
+            -config-file .github/actionlint.yaml \
+            .github/workflows/collect-staging-intake-evidence.yml \
+            .github/workflows/controlled-intake-staging-activation-gate.yml
+      - run: |
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          python3 -m pip install --disable-pip-version-check --no-cache-dir -r requirements-validation.txt
+          python3 codestra/scripts/validate.py
+          python3 codestra/scripts/validate_runtime_images.py
+          python3 scripts/validate_repository_readiness.py
+          python3 -m unittest discover -s tests -p 'test_*.py'
+      - name: Validate exact locked runtime at protected commit
+        run: bash scripts/validate_locked_runtime.sh "$GITHUB_SHA"
