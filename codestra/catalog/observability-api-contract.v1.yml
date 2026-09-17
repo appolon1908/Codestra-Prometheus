@@ -92,3 +92,13 @@ required_flows:
   - grafana_to_prometheus
   - grafana_to_loki
   - grafana_to_tempo
+
+kyyow_observability_projection:
+  contract_authority:
+    repository: appolon1908-hue/Middleware-
+    path: contracts/observability/odoo-sync.v1.json
+  kpi_submission_boundary: Middleware /v1/observability/kpis
+  alert_submission_boundary: Alertmanager /v1/integrations/alertmanager/events
+  business_record_owner: appolon1908-hue/Odoo
+  odoo_write_authority: Middleware Odoo result worker only
+  direct_odoo_write: false
