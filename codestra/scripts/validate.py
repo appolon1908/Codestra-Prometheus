@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import re
 import sys
@@ -650,8 +651,31 @@ def validate_observability_api_contract() -> None:
         fail("observability required-flow set is incomplete")
 
 
+def validate_target_inventory() -> None:
+    """The committed per-target inventory must describe exactly this configuration."""
+    spec = importlib.util.spec_from_file_location(
+        "target_inventory", ROOT / "scripts" / "target_inventory.py"
+    )
+    module = importlib.util.module_from_spec(spec)
+    assert spec and spec.loader
+    spec.loader.exec_module(module)
+    inventory = module.build_inventory()
+    problems = module.check_invariants(inventory)
+    if problems:
+        fail("target inventory invariant: " + "; ".join(problems))
+    committed = json.loads(
+        (ROOT / "target-inventory.v1.json").read_text(encoding="utf-8")
+    )
+    if committed != inventory:
+        fail(
+            "codestra/target-inventory.v1.json is stale; "
+            "regenerate with target_inventory.py --write"
+        )
+
+
 def main() -> int:
     validate_profile()
+    validate_target_inventory()
     validate_catalog()
     validate_observability_api_contract()
     validate_targets()
