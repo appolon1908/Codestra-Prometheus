@@ -1,0 +1,114 @@
+groups:
+  - name: codestra-monitoring-platform
+    rules:
+      - alert: CodestraMiddlewareMetricsScrapeFailing
+        expr: up{job="codestra-middleware-metrics"} == 0
+        for: 3m
+        labels:
+          severity: critical
+          owner: codestra-observability
+          codestra_business: platform
+          service: middleware
+          environment: "{{ $labels.environment }}"
+        annotations:
+          summary: "Middleware /metrics cannot be scraped with the monitoring-readonly identity"
+          description: "Either the private listener is down or the monitoring-readonly client secret rendered from OpenBao is missing, expired or lacks metrics.read. Operational control actions that need Middleware fail closed; native telemetry paths continue."
+          runbook_url: "https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#rule-evaluation-failures"
+
+      - alert: CodestraAlertmanagerIncidentIngestionStalled
+        expr: (increase(codestra_observability_incident_events_total[30m]) == 0 and on() increase(alertmanager_notifications_total{integration="webhook"}[30m]) > 0) or absent(codestra_observability_incident_events_total)
+        for: 15m
+        labels:
+          severity: critical
+          owner: codestra-observability
+          codestra_business: platform
+          service: middleware
+          environment: production
+        annotations:
+          summary: "Alertmanager delivers webhooks but Middleware records no incident events"
+          description: "The durable incident path Alertmanager -> POST /v1/integrations/alertmanager/events is degraded. Prometheus still evaluates rules; incident delivery state is degraded until Middleware ingestion recovers."
+          runbook_url: "https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#notification-failures"
+
+      - alert: CodestraAlertmanagerNotificationFailures
+        expr: increase(alertmanager_notifications_failed_total[10m]) > 0
+        for: 5m
+        labels:
+          severity: high
+          owner: codestra-observability
+          codestra_business: platform
+          service: alertmanager
+          environment: "{{ $labels.environment }}"
+        annotations:
+          summary: "Alertmanager webhook deliveries to Middleware are failing"
+          description: "Check the middleware-alert-webhook-token file rendered from OpenBao and the private route to Middleware; repeated deliveries are deduplicated by fingerprint and never create duplicate incidents."
+          runbook_url: "https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#notification-failures"
+
+      - alert: CodestraLogPipelineDown
+        expr: up{job="codestra-targets",service=~"loki|alloy"} == 0
+        for: 5m
+        labels:
+          severity: high
+          owner: codestra-observability
+          codestra_business: platform
+          service: "{{ $labels.service }}"
+          environment: "{{ $labels.environment }}"
+        annotations:
+          summary: "{{ $labels.service }} is down; log delivery is degraded"
+          description: "Metrics and traces continue on their native paths. Alloy buffers logs only within its bounded write-ahead policy; no logs are redirected through Middleware."
+          runbook_url: "https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#rule-evaluation-failures"
+
+      - alert: CodestraTracePipelineDown
+        expr: up{job="codestra-targets",service=~"tempo|opentelemetry-collector"} == 0
+        for: 5m
+        labels:
+          severity: high
+          owner: codestra-observability
+          codestra_business: platform
+          service: "{{ $labels.service }}"
+          environment: "{{ $labels.environment }}"
+        annotations:
+          summary: "{{ $labels.service }} is down; tracing is degraded"
+          description: "Business processing continues; tracing is marked degraded until the collector or Tempo recovers."
+          runbook_url: "https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#rule-evaluation-failures"
+
+      - alert: CodestraOtelGatewayExportFailures
+        expr: sum by (environment, exporter) (rate(otelcol_exporter_send_failed_spans[5m])) > 0 or sum by (environment, exporter) (rate(otelcol_exporter_send_failed_log_records[5m])) > 0
+        for: 10m
+        labels:
+          severity: warning
+          owner: codestra-observability
+          codestra_business: platform
+          service: opentelemetry-collector
+          environment: "{{ $labels.environment }}"
+        annotations:
+          summary: "The OpenTelemetry gateway is failing to export to {{ $labels.exporter }}"
+          description: "Spans or log records are being dropped after the bounded retry budget; the affected backend is degraded."
+          runbook_url: "https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#rule-evaluation-failures"
+
+      - alert: CodestraSafeProbeFailing
+        expr: probe_success{job="blackbox",service=~"middleware-readiness|grafana-login|superset-health"} == 0
+        for: 3m
+        labels:
+          severity: high
+          owner: codestra-observability
+          codestra_business: platform
+          service: "{{ $labels.service }}"
+          environment: "{{ $labels.environment }}"
+        annotations:
+          summary: "Safe availability probe for {{ $labels.service }} is failing"
+          description: "GET/HEAD-only Blackbox probe; no business effect. Check the service and its ingress."
+          runbook_url: "https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#rule-evaluation-failures"
+
+      - alert: CodestraTestSynCertificationSignalMissing
+        expr: absent_over_time(codestra_test_syn_certification_requests_total{campaign="TEST_SYN"}[24h])
+        for: 0m
+        labels:
+          severity: informational
+          owner: codestra-observability
+          codestra_business: platform
+          service: middleware
+          environment: staging
+        annotations:
+          summary: "No TEST_SYN certification request has produced a metric in 24 hours"
+          description: "Informational only: the synthetic TEST_SYN path (request -> metric -> log -> trace -> alert -> incident) has not been exercised recently in staging."
+          runbook_url: "https://github.com/appolon1908-hue/Middleware-/blob/main/docs/evidence/monitoring-openbao-integration-20260916/TEST-SYN.md"

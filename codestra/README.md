@@ -60,3 +60,15 @@ python codestra/scripts/probe_observability_integrations.py \
 ```
 
 The probe permits only GET/HEAD checks, never records URLs or certificate material in evidence, writes evidence mode `0600`, and exits nonzero if any governed check fails. It does not activate pending targets, deliver alerts, query customer data, or perform business writes.
+
+## Authenticated scrapes and OpenBao
+
+Middleware `/metrics` and OpenBao `/v1/sys/metrics` are scraped by dedicated jobs, never by the unauthenticated `codestra-targets` catalogue:
+
+- `codestra-middleware-metrics` authenticates with the Keycloak `monitoring-readonly` client (`scope=metrics.read`, audience `middleware-api`) through `oauth2.client_secret_file`; the secret is rendered by the OpenBao agent from `codestra/<environment>/observability/prometheus/scrape-credentials/monitoring-readonly-client` (identity `prometheus-openbao`). The target is the canonical private runtime `middleware-integration-api:8095`.
+- `codestra-openbao` uses `params.format=[prometheus]`, mTLS material and a short-lived bearer from `credentials_file`, all rendered outside Git; the token is bound to the `workload-prometheus-openbao-<environment>` policy, which grants `sys/metrics` read only. It stays `activation=pending` until the OpenBao runtime is certified.
+- No `bearer_token`, `password`, `client_secret` or `credentials` value may appear inline; `codestra/scripts/validate.py` fails closed on any of them and on any Middleware/OpenBao entry in the file_sd catalogue.
+- Blackbox targets may select a reviewed read-only module through the `probe_module` label (`https_2xx`, `http_2xx_internal`, `tcp_connect`, `https_openbao_health`, `dns_a_record`, `tls_expiry`); `https_openbao_health` issues only `GET /v1/sys/health`, accepts active/standby and never unseals.
+- `rules/openbao-alerts.yml` covers metrics availability, sealed/leader state, health-probe failure and latency, audit-device failure or silence, authentication-failure surges, lease revocation surges and scrape-token expiry; `rules/monitoring-platform-alerts.yml` monitors the monitor (Middleware scrape identity, Alertmanager -> Middleware incident ingestion, log/trace pipelines, OTel export failures, safe probes, the TEST_SYN certification signal).
+
+`promtool check config` in CI runs `--syntax-only` because the referenced credential files exist only at runtime; the runtime preflight proves their presence.

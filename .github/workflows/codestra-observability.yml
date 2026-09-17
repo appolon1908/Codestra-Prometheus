@@ -98,7 +98,11 @@ jobs:
           go build -trimpath -o ../.bin/promtool ./cmd/promtool
 
       - name: Validate Prometheus configuration
-        run: .bin/promtool check config codestra/prometheus/prometheus.yml
+        # Credential and TLS material referenced by the authenticated Middleware and
+        # OpenBao jobs are runtime-mounted OpenBao-rendered files under /run/secrets;
+        # they never exist in CI, so the structural check runs syntax-only here and
+        # the file-presence check belongs to the runtime preflight.
+        run: .bin/promtool check config --syntax-only codestra/prometheus/prometheus.yml
 
       - name: Validate Prometheus rules
         run: .bin/promtool check rules codestra/prometheus/rules/*.yml
