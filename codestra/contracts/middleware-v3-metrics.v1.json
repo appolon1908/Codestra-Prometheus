@@ -301,7 +301,7 @@
       "labels": [
         "dependency"
       ],
-      "help": "1 when a required dependency (postgres, redis, nats, openbao, keycloak, adapters) is healthy; name PENDING - the V3 candidate exposes dependency health through /health/ready and the readiness collector today",
+      "help": "1 when a required dependency (postgres, redis, nats, openbao, keycloak, adapters) is healthy; V3 name PENDING - at the prep base the same signal is codestra_readiness{dependency} (app/observability.py) and /health/ready",
       "status": "EXPECTED_PENDING_V3",
       "present_at_prep_base": false
     }
@@ -309,6 +309,12 @@
   "observed_at_prep_base": {
     "note": "metric names exposed by Middleware at the prep base that the V3 names will supersede or complement",
     "names": [
+      "codestra_http_requests_total{operation,method,status}",
+      "codestra_http_request_duration_seconds",
+      "codestra_http_active_requests",
+      "codestra_auth_denials_total{operation,result}",
+      "codestra_readiness{dependency}",
+      "codestra_release_info",
       "codestra_observability_incident_events_total{result}",
       "codestra_policy_decisions_total",
       "codestra_worker_cycles_total",
