@@ -1,0 +1,337 @@
+{
+  "schema_version": "1.0",
+  "contract_id": "middleware-v3-metrics",
+  "lane": "E",
+  "status": "PREPARED_DISABLED",
+  "activation_enabled": false,
+  "provider_effects_enabled": false,
+  "purpose": "Private Middleware /metrics scrape contract and the V3 command-kernel metric expectations Prometheus will collect, with a closed low-cardinality label policy. Middleware never becomes a telemetry database; Prometheus owns collection, storage and query.",
+  "middleware": {
+    "repository": "appolon1908-hue/Middleware-",
+    "prep_base_sha": "22d023a9c65b0789a0f7ee6c28548753521a9eff",
+    "v3_final_sha": "PENDING",
+    "repin_required_after_v3_merge": true,
+    "v3_candidate_observed": {
+      "branch": "mission/middleware-v3-command-kernel-20260919",
+      "sha": "1acb2ae",
+      "authority": "informational only; unmerged, owned by the Middleware V3 session"
+    }
+  },
+  "scrape_contract": {
+    "job_name": "codestra-middleware-metrics",
+    "config_path": "codestra/prometheus/prometheus.yml",
+    "method": "GET",
+    "metrics_path": "/metrics",
+    "scheme": "http (private Docker network only; TLS terminates nowhere public)",
+    "expected_endpoint": "middleware-integration-api:8095",
+    "identity": {
+      "client_id": "monitoring-readonly",
+      "scope": "metrics.read",
+      "audience": "middleware-api",
+      "issuer": "https://auth.codestra.co/realms/codestra",
+      "token_url": "https://auth.codestra.co/realms/codestra/protocol/openid-connect/token",
+      "grant": "client_credentials",
+      "client_secret_source": "/run/secrets/monitoring-readonly-client-secret (OpenBao-rendered file; secret_ref codestra/<env>/observability/prometheus/scrape-credentials/monitoring-readonly-client)",
+      "maximum_token_lifetime_seconds": 300
+    },
+    "public_exposure": false,
+    "edge_behavior": {
+      "caddy": "GET /metrics answers 404 ahead of Kong and the legacy fallback (Codestra-Caddy integration/kong-edge-20260919 @ 1a34d9d)",
+      "kong": "no route publishes /metrics; monitoring-readonly reaches Middleware on the private network only"
+    },
+    "evidence_at_prep_base": {
+      "canonical_api": "app/appolon_routes.py: GET /metrics verifies client monitoring-readonly + scope metrics.read as its first statement (proved by scripts/validate_staging_intake_observability_contract.py)",
+      "declared_contract": "contracts/staging-intake-observability-runtime.v1.json: {GET /metrics, client monitoring-readonly, scope metrics.read, audience middleware-api, public_exposure false}",
+      "narrow_runtimes": "app/entrypoints/runtime.py mounts prometheus_client make_asgi_app() at /metrics for worker and narrow-service processes WITHOUT bearer verification (guarded() covers /api/ and /v1/ only) - PRIVATE_REQUIRED; V3 expectation: authenticate or keep strictly network-private",
+      "worker_metrics_exposure_classification": "PRIVATE_REQUIRED"
+    },
+    "limits": {
+      "sample_limit": 100000,
+      "label_limit": 40,
+      "label_name_length_limit": 128,
+      "label_value_length_limit": 2048,
+      "body_size_limit": "16MB"
+    },
+    "metric_relabel_guard": "labeldrop of every forbidden label below on the codestra-middleware-metrics job"
+  },
+  "label_policy": {
+    "allowed": [
+      "service",
+      "environment",
+      "adapter",
+      "command_family",
+      "state",
+      "result"
+    ],
+    "bounded_extension_observed_on_v3_candidate": {
+      "stage": "kernel stage of middleware_command_duration_seconds (closed enum in the V3 kernel)",
+      "reason": "policy / safety denial reason code (closed enum; never free text)",
+      "mode": "replay mode (closed enum)",
+      "operation": "adapter operation name (closed enum per adapter)",
+      "dependency": "required dependency name (closed enum: postgres, redis, nats, openbao, keycloak, kong, adapter ids)",
+      "le": "histogram bucket boundary (Prometheus-native)"
+    },
+    "forbidden": [
+      "customer",
+      "customer_id",
+      "customer_name",
+      "email",
+      "phone",
+      "command_id",
+      "operation_id",
+      "correlation_id",
+      "trace_id",
+      "span_id",
+      "request_id",
+      "idempotency_key",
+      "incident_id",
+      "fingerprint",
+      "lease_id",
+      "tenant_id",
+      "user_id",
+      "account_id",
+      "secret_ref",
+      "reference_uri",
+      "jti",
+      "path",
+      "url",
+      "query",
+      "client_address"
+    ],
+    "rule": "every label value set must be a closed enum known at build time; identifiers, personal data and free text are never labels (they remain structured log fields or trace attributes)",
+    "target_labels_added_by_prometheus": [
+      "codestra_business",
+      "environment",
+      "region",
+      "deployment",
+      "server",
+      "application",
+      "service",
+      "activation",
+      "job_class",
+      "tenant_scope"
+    ]
+  },
+  "expected_metrics": [
+    {
+      "name": "commands_received_total",
+      "v3_candidate_name": "middleware_commands_received_total",
+      "type": "counter",
+      "labels": [
+        "command_family"
+      ],
+      "help": "Commands received by the kernel",
+      "status": "EXPECTED_PENDING_V3",
+      "present_at_prep_base": false
+    },
+    {
+      "name": "commands_completed_total",
+      "v3_candidate_name": "middleware_commands_completed_total",
+      "type": "counter",
+      "labels": [
+        "command_family",
+        "adapter"
+      ],
+      "help": "Commands completed after a matched readback",
+      "status": "EXPECTED_PENDING_V3",
+      "present_at_prep_base": false
+    },
+    {
+      "name": "commands_failed_total",
+      "v3_candidate_name": "middleware_commands_failed_total",
+      "type": "counter",
+      "labels": [
+        "command_family",
+        "adapter",
+        "result"
+      ],
+      "help": "Commands failed",
+      "status": "EXPECTED_PENDING_V3",
+      "present_at_prep_base": false
+    },
+    {
+      "name": "commands_reconciliation_required_total",
+      "v3_candidate_name": "middleware_commands_reconciliation_required_total",
+      "type": "counter",
+      "labels": [
+        "command_family",
+        "adapter"
+      ],
+      "help": "Commands parked for reconciliation",
+      "status": "EXPECTED_PENDING_V3",
+      "present_at_prep_base": false
+    },
+    {
+      "name": "command_duration_seconds",
+      "v3_candidate_name": "middleware_command_duration_seconds",
+      "type": "histogram",
+      "labels": [
+        "stage"
+      ],
+      "help": "Kernel stage latency",
+      "status": "EXPECTED_PENDING_V3",
+      "present_at_prep_base": false
+    },
+    {
+      "name": "idempotency_duplicates_total",
+      "v3_candidate_name": "middleware_idempotency_duplicates_total",
+      "type": "counter",
+      "labels": [],
+      "help": "Exact replays answered from the ledger",
+      "status": "EXPECTED_PENDING_V3",
+      "present_at_prep_base": false
+    },
+    {
+      "name": "policy_denials_total",
+      "v3_candidate_name": "middleware_policy_denials_total",
+      "type": "counter",
+      "labels": [
+        "reason"
+      ],
+      "help": "Policy Engine denials",
+      "status": "EXPECTED_PENDING_V3",
+      "present_at_prep_base": false
+    },
+    {
+      "name": "safety_denials_total",
+      "v3_candidate_name": "middleware_safety_denials_total",
+      "type": "counter",
+      "labels": [
+        "reason"
+      ],
+      "help": "Safety Gate denials",
+      "status": "EXPECTED_PENDING_V3",
+      "present_at_prep_base": false
+    },
+    {
+      "name": "outbox_backlog",
+      "v3_candidate_name": "middleware_outbox_backlog",
+      "type": "gauge",
+      "labels": [],
+      "help": "Outbox rows awaiting dispatch",
+      "status": "EXPECTED_PENDING_V3",
+      "present_at_prep_base": false
+    },
+    {
+      "name": "outbox_oldest_seconds",
+      "v3_candidate_name": "middleware_outbox_oldest_seconds",
+      "type": "gauge",
+      "labels": [],
+      "help": "Age of the oldest pending outbox row",
+      "status": "EXPECTED_PENDING_V3",
+      "present_at_prep_base": false
+    },
+    {
+      "name": "active_leases",
+      "v3_candidate_name": "middleware_active_leases",
+      "type": "gauge",
+      "labels": [],
+      "help": "Outbox rows currently leased",
+      "status": "EXPECTED_PENDING_V3",
+      "present_at_prep_base": false
+    },
+    {
+      "name": "lease_expirations_total",
+      "v3_candidate_name": "middleware_lease_expirations_total",
+      "type": "counter",
+      "labels": [],
+      "help": "Leases reclaimed after expiry",
+      "status": "EXPECTED_PENDING_V3",
+      "present_at_prep_base": false
+    },
+    {
+      "name": "adapter_requests_total",
+      "v3_candidate_name": "middleware_adapter_requests_total",
+      "type": "counter",
+      "labels": [
+        "adapter",
+        "operation"
+      ],
+      "help": "Adapter invocations",
+      "status": "EXPECTED_PENDING_V3",
+      "present_at_prep_base": false
+    },
+    {
+      "name": "adapter_failures_total",
+      "v3_candidate_name": "middleware_adapter_failures_total",
+      "type": "counter",
+      "labels": [
+        "adapter",
+        "operation",
+        "result"
+      ],
+      "help": "Adapter invocations that did not acknowledge",
+      "status": "EXPECTED_PENDING_V3",
+      "present_at_prep_base": false
+    },
+    {
+      "name": "adapter_latency_seconds",
+      "v3_candidate_name": "middleware_adapter_latency_seconds",
+      "type": "histogram",
+      "labels": [
+        "adapter",
+        "operation"
+      ],
+      "help": "Adapter latency",
+      "status": "EXPECTED_PENDING_V3",
+      "present_at_prep_base": false
+    },
+    {
+      "name": "dead_letters_total",
+      "v3_candidate_name": "middleware_dead_letters",
+      "type": "gauge",
+      "labels": [],
+      "help": "Dead-lettered outbox rows (the V3 candidate exposes a gauge; the mission names a counter - reconcile the name at re-pin)",
+      "status": "EXPECTED_PENDING_V3",
+      "present_at_prep_base": false
+    },
+    {
+      "name": "reconciliation_backlog",
+      "v3_candidate_name": "middleware_reconciliation_backlog",
+      "type": "gauge",
+      "labels": [],
+      "help": "Operations awaiting reconciliation",
+      "status": "EXPECTED_PENDING_V3",
+      "present_at_prep_base": false
+    },
+    {
+      "name": "dependency_health",
+      "v3_candidate_name": "middleware_dependency_up",
+      "type": "gauge",
+      "labels": [
+        "dependency"
+      ],
+      "help": "1 when a required dependency (postgres, redis, nats, openbao, keycloak, adapters) is healthy; name PENDING - the V3 candidate exposes dependency health through /health/ready and the readiness collector today",
+      "status": "EXPECTED_PENDING_V3",
+      "present_at_prep_base": false
+    }
+  ],
+  "observed_at_prep_base": {
+    "note": "metric names exposed by Middleware at the prep base that the V3 names will supersede or complement",
+    "names": [
+      "codestra_observability_incident_events_total{result}",
+      "codestra_policy_decisions_total",
+      "codestra_worker_cycles_total",
+      "outbox_depth",
+      "oldest_outbox_age_seconds",
+      "dead_letter_count",
+      "retry_count",
+      "codestra_worker_ready",
+      "lead_submissions_total",
+      "intake_inbox_backlog",
+      "intake_outbox_backlog",
+      "intake_oldest_pending_seconds"
+    ]
+  },
+  "prepared_rules": {
+    "path": "codestra/prometheus/rules-prepared/middleware-v3/kernel-alerts.yml",
+    "loaded_by_runtime": false,
+    "why_dark": "codestra/compose.yaml mounts only codestra/prometheus/rules; the prepared directory is validated but not evaluated until V3_FINAL_SHA is pinned and the file is moved into codestra/prometheus/rules/ by the owner",
+    "activation_steps": [
+      "Re-pin middleware.v3_final_sha",
+      "Confirm every v3_candidate_name and label set against the frozen V3 tree; update this contract",
+      "git mv codestra/prometheus/rules-prepared/middleware-v3/kernel-alerts.yml codestra/prometheus/rules/middleware-v3-kernel-alerts.yml",
+      "promtool check rules; regenerate codestra/target-inventory.v1.json"
+    ]
+  }
+}

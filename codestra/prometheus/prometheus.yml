@@ -159,7 +159,7 @@ scrape_configs:
         action: keep
     metric_relabel_configs:
       - action: labeldrop
-        regex: '(?i)^(tenant_id|tenant_name|organization_id|organization_name|customer_id|customer_name|account_id|user_id|user_name|email|phone|consumer|workspace|token|secret|password|session_id|request_id|correlation_id|trace_id|span_id|lead_id|order_id|message_id|workflow_id|execution_id|webhook_id|idempotency_key|raw_path|path|uri|url|query|query_string|client_address|network_peer_address|db_statement|http_target|http_url|url_full|service_instance_id|host_id|container_id|image_id|process_pid|pod_uid|exception_message|id)$'
+        regex: '(?i)^(tenant_id|tenant_name|organization_id|organization_name|customer|customer_id|customer_name|account_id|user_id|user_name|email|phone|consumer|workspace|token|secret|password|session_id|request_id|correlation_id|trace_id|span_id|lead_id|order_id|message_id|workflow_id|execution_id|webhook_id|idempotency_key|command_id|operation_id|incident_id|fingerprint|lease_id|secret_ref|reference_uri|jti|raw_path|path|uri|url|query|query_string|client_address|network_peer_address|db_statement|http_target|http_url|url_full|service_instance_id|host_id|container_id|image_id|process_pid|pod_uid|exception_message|id)$'
 
   # OpenBao exposes its telemetry at /v1/sys/metrics?format=prometheus on the
   # private observability listener behind mTLS. The bearer is a short-lived

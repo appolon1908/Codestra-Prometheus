@@ -1,0 +1,166 @@
+# PREPARED / DARK: Middleware V3 command-kernel alerts.
+# Not mounted by codestra/compose.yaml (only codestra/prometheus/rules is), so nothing evaluates
+# until V3_FINAL_SHA is pinned and the owner moves this file into codestra/prometheus/rules/.
+# Metric names follow codestra/contracts/middleware-v3-metrics.v1.json (v3_candidate_name);
+# every aggregation uses only allowed low-cardinality labels. No absence alerts: a metric that
+# does not exist yet must never page.
+groups:
+  - name: middleware-v3-command-kernel
+    interval: 30s
+    rules:
+      - alert: MiddlewareV3CommandFailureRatioHigh
+        expr: sum by (service, environment, command_family) (rate(middleware_commands_failed_total{job="codestra-middleware-metrics"}[10m])) / clamp_min(sum by (service, environment, command_family) (rate(middleware_commands_received_total{job="codestra-middleware-metrics"}[10m])), 0.001) > 0.05
+        for: 10m
+        labels:
+          severity: high
+          owner: middleware-platform
+          codestra_business: platform
+          service: middleware
+          environment: production
+        annotations:
+          summary: Middleware V3 command failure ratio above 5% ({{ $labels.command_family }})
+          description: More than 5% of {{ $labels.command_family }} commands failed over 10 minutes in {{ $labels.environment }}.
+          runbook_url: https://github.com/appolon1908-hue/Middleware-/blob/main/docs/runbooks/command-kernel.md
+      - alert: MiddlewareV3ReconciliationBacklogGrowing
+        expr: max by (service, environment) (middleware_reconciliation_backlog{job="codestra-middleware-metrics"}) > 100
+        for: 15m
+        labels:
+          severity: high
+          owner: middleware-platform
+          codestra_business: platform
+          service: middleware
+          environment: production
+        annotations:
+          summary: Middleware V3 reconciliation backlog above 100 operations
+          description: Operations awaiting reconciliation exceeded 100 for 15 minutes; the adapter readback path or the reconciler is degraded.
+          runbook_url: https://github.com/appolon1908-hue/Middleware-/blob/main/docs/runbooks/command-kernel.md
+      - alert: MiddlewareV3OutboxOldestTooOld
+        expr: max by (service, environment) (middleware_outbox_oldest_seconds{job="codestra-middleware-metrics"}) > 600
+        for: 10m
+        labels:
+          severity: high
+          owner: middleware-platform
+          codestra_business: platform
+          service: middleware
+          environment: production
+        annotations:
+          summary: Middleware V3 outbox has rows older than 10 minutes
+          description: The oldest pending outbox row is older than 600 seconds; workers are not dispatching.
+          runbook_url: https://github.com/appolon1908-hue/Middleware-/blob/main/docs/runbooks/command-kernel.md
+      - alert: MiddlewareV3OutboxBacklogHigh
+        expr: max by (service, environment) (middleware_outbox_backlog{job="codestra-middleware-metrics"}) > 1000
+        for: 10m
+        labels:
+          severity: warning
+          owner: middleware-platform
+          codestra_business: platform
+          service: middleware
+          environment: production
+        annotations:
+          summary: Middleware V3 outbox backlog above 1000 rows
+          description: Outbox rows awaiting dispatch exceeded 1000 for 10 minutes.
+          runbook_url: https://github.com/appolon1908-hue/Middleware-/blob/main/docs/runbooks/command-kernel.md
+      - alert: MiddlewareV3DeadLettersPresent
+        expr: max by (service, environment) (middleware_dead_letters{job="codestra-middleware-metrics"}) > 0
+        for: 5m
+        labels:
+          severity: high
+          owner: middleware-platform
+          codestra_business: platform
+          service: middleware
+          environment: production
+        annotations:
+          summary: Middleware V3 dead letters present
+          description: Dead-lettered outbox rows exist; each needs an operator decision (replay or resolve).
+          runbook_url: https://github.com/appolon1908-hue/Middleware-/blob/main/docs/runbooks/command-kernel.md
+      - alert: MiddlewareV3LeaseExpirationsSurge
+        expr: sum by (service, environment) (increase(middleware_lease_expirations_total{job="codestra-middleware-metrics"}[15m])) > 20
+        for: 0m
+        labels:
+          severity: warning
+          owner: middleware-platform
+          codestra_business: platform
+          service: middleware
+          environment: production
+        annotations:
+          summary: Middleware V3 worker leases expiring repeatedly
+          description: More than 20 leases were reclaimed after expiry in 15 minutes; workers are stalling or crashing mid-lease.
+          runbook_url: https://github.com/appolon1908-hue/Middleware-/blob/main/docs/runbooks/command-kernel.md
+      - alert: MiddlewareV3AdapterFailureRatioHigh
+        expr: sum by (service, environment, adapter) (rate(middleware_adapter_failures_total{job="codestra-middleware-metrics"}[10m])) / clamp_min(sum by (service, environment, adapter) (rate(middleware_adapter_requests_total{job="codestra-middleware-metrics"}[10m])), 0.001) > 0.2
+        for: 10m
+        labels:
+          severity: high
+          owner: middleware-platform
+          codestra_business: platform
+          service: middleware
+          environment: production
+        annotations:
+          summary: Middleware V3 adapter {{ $labels.adapter }} failing above 20%
+          description: Adapter {{ $labels.adapter }} did not acknowledge more than 20% of invocations over 10 minutes.
+          runbook_url: https://github.com/appolon1908-hue/Middleware-/blob/main/docs/runbooks/command-kernel.md
+      - alert: MiddlewareV3AdapterLatencyP95High
+        expr: histogram_quantile(0.95, sum by (le, service, environment, adapter) (rate(middleware_adapter_latency_seconds_bucket{job="codestra-middleware-metrics"}[10m]))) > 5
+        for: 15m
+        labels:
+          severity: warning
+          owner: middleware-platform
+          codestra_business: platform
+          service: middleware
+          environment: production
+        annotations:
+          summary: Middleware V3 adapter {{ $labels.adapter }} p95 latency above 5s
+          description: The 95th percentile latency of adapter {{ $labels.adapter }} exceeded 5 seconds for 15 minutes.
+          runbook_url: https://github.com/appolon1908-hue/Middleware-/blob/main/docs/runbooks/command-kernel.md
+      - alert: MiddlewareV3SafetyDenialsSurge
+        expr: sum by (service, environment) (increase(middleware_safety_denials_total{job="codestra-middleware-metrics"}[15m])) > 10
+        for: 0m
+        labels:
+          severity: high
+          owner: middleware-platform
+          codestra_business: platform
+          service: middleware
+          environment: production
+        annotations:
+          summary: Middleware V3 Safety Gate denials surging
+          description: More than 10 Safety Gate denials in 15 minutes; a caller is repeatedly attempting a blocked provider effect.
+          runbook_url: https://github.com/appolon1908-hue/Middleware-/blob/main/docs/runbooks/command-kernel.md
+      - alert: MiddlewareV3PolicyDenialsSurge
+        expr: sum by (service, environment) (increase(middleware_policy_denials_total{job="codestra-middleware-metrics"}[15m])) > 50
+        for: 0m
+        labels:
+          severity: warning
+          owner: middleware-platform
+          codestra_business: platform
+          service: middleware
+          environment: production
+        annotations:
+          summary: Middleware V3 Policy Engine denials surging
+          description: More than 50 Policy Engine denials in 15 minutes.
+          runbook_url: https://github.com/appolon1908-hue/Middleware-/blob/main/docs/runbooks/command-kernel.md
+      - alert: MiddlewareV3IdempotencyDuplicatesSurge
+        expr: sum by (service, environment) (increase(middleware_idempotency_duplicates_total{job="codestra-middleware-metrics"}[15m])) > 100
+        for: 0m
+        labels:
+          severity: informational
+          owner: middleware-platform
+          codestra_business: platform
+          service: middleware
+          environment: production
+        annotations:
+          summary: Middleware V3 idempotent replays surging
+          description: More than 100 exact replays were answered from the ledger in 15 minutes; a caller is retrying aggressively.
+          runbook_url: https://github.com/appolon1908-hue/Middleware-/blob/main/docs/runbooks/command-kernel.md
+      - alert: MiddlewareV3CommandStageLatencyP95High
+        expr: histogram_quantile(0.95, sum by (le, service, environment, stage) (rate(middleware_command_duration_seconds_bucket{job="codestra-middleware-metrics"}[10m]))) > 2
+        for: 15m
+        labels:
+          severity: warning
+          owner: middleware-platform
+          codestra_business: platform
+          service: middleware
+          environment: production
+        annotations:
+          summary: Middleware V3 kernel stage {{ $labels.stage }} p95 above 2s
+          description: The 95th percentile latency of kernel stage {{ $labels.stage }} exceeded 2 seconds for 15 minutes.
+          runbook_url: https://github.com/appolon1908-hue/Middleware-/blob/main/docs/runbooks/command-kernel.md

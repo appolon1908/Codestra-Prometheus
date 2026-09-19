@@ -1,6 +1,6 @@
 {
   "component": "prometheus",
-  "config_digest": "sha256:d2c7566486ed8f1df74ba808a23164d335ece16fddbbad6d894eb7ba99d87965",
+  "config_digest": "sha256:5c5a0734c1958eaeae3a62f4a654900cce5bb82b0d73908939fec2882da76c0e",
   "config_path": "prometheus/prometheus.yml",
   "counts": {
     "active": 23,

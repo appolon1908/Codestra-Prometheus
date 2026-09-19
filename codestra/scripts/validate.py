@@ -69,6 +69,8 @@ FORBIDDEN = re.compile(
     r"consumer|workspace|token|secret|password|session_id|request_id|"
     r"correlation_id|trace_id|span_id|lead_id|order_id|message_id|workflow_id|"
     r"execution_id|webhook_id|idempotency_key|raw_path|path|uri|url|query|"
+r"customer|command_id|operation_id|incident_id|fingerprint|lease_id|"
+r"secret_ref|reference_uri|jti|"
     r"query_string|client_address|network_peer_address|db_statement|http_target|"
     r"http_url|url_full|service_instance_id|host_id|container_id|image_id|"
     r"process_pid|pod_uid|exception_message|id)$"
