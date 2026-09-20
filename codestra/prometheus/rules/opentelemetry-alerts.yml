@@ -25,7 +25,7 @@ groups:
         annotations:
           summary: "OpenTelemetry application metrics scrape is down"
           description: "Prometheus cannot scrape the sanitized Collector application-metrics endpoint on port 8889."
-          runbook_url: "https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#notification-failures"
+          runbook_url: "https://github.com/ingtrader21-spec/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#notification-failures"
 
       - alert: CodestraOtelReceiverRefusedData
         expr: codestra:otel_receiver_refused_items:rate5m > 0
@@ -39,7 +39,7 @@ groups:
         annotations:
           summary: "OpenTelemetry Collector is refusing incoming telemetry"
           description: "Receiver {{ $labels.receiver }} has refused telemetry for five minutes; clients may experience telemetry loss."
-          runbook_url: "https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#notification-failures"
+          runbook_url: "https://github.com/ingtrader21-spec/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#notification-failures"
 
       - alert: CodestraOtelExporterEnqueueFailures
         expr: codestra:otel_exporter_enqueue_failures:rate5m > 0
@@ -53,7 +53,7 @@ groups:
         annotations:
           summary: "OpenTelemetry Collector exporter queue is dropping telemetry"
           description: "Exporter {{ $labels.exporter }} cannot enqueue telemetry; queue saturation may cause telemetry loss."
-          runbook_url: "https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#notification-failures"
+          runbook_url: "https://github.com/ingtrader21-spec/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#notification-failures"
 
       - alert: CodestraOtelExporterSendFailures
         expr: codestra:otel_exporter_send_failures:rate5m > 0
@@ -67,7 +67,7 @@ groups:
         annotations:
           summary: "OpenTelemetry Collector exporter delivery is failing"
           description: "Exporter {{ $labels.exporter }} has sustained send failures for ten minutes; retries may still be active."
-          runbook_url: "https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#notification-failures"
+          runbook_url: "https://github.com/ingtrader21-spec/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#notification-failures"
 
       - alert: CodestraOtelExporterQueueNearCapacity
         expr: codestra:otel_exporter_queue_utilization:max > 0.80
@@ -81,4 +81,4 @@ groups:
         annotations:
           summary: "OpenTelemetry Collector exporter queue is near capacity"
           description: "Exporter {{ $labels.exporter }} queue has remained above 80% utilization for ten minutes."
-          runbook_url: "https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#head-series-capacity"
+          runbook_url: "https://github.com/ingtrader21-spec/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#head-series-capacity"

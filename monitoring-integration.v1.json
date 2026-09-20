@@ -1,15 +1,15 @@
 {
   "schema_version": 1,
-  "repository": "appolon1908-hue/Codestra-Prometheus",
+  "repository": "ingtrader21-spec/Codestra-Prometheus",
   "design_group": "Monitoring",
   "monitoring_profile": "native-component",
-  "controller_repository": "appolon1908-hue/Middleware-",
+  "controller_repository": "ingtrader21-spec/Middleware-",
   "activation_enabled": false,
   "contract_authority": {
-    "repository": "appolon1908-hue/Middleware-",
+    "repository": "ingtrader21-spec/Middleware-",
     "path": "contracts/observability/odoo-sync.v1.json",
-    "api_owner": "appolon1908-hue/Middleware-",
-    "business_record_owner": "appolon1908-hue/Odoo"
+    "api_owner": "ingtrader21-spec/Middleware-",
+    "business_record_owner": "ingtrader21-spec/Odoo"
   },
   "kyyow_observability_sync": {
     "role": "metric-authority",

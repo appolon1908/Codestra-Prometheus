@@ -6,7 +6,7 @@ Prometheus does not own a Codestra user-password screen. In the current Codestra
 
 ## Visual contract
 
-Any approved human browser gateway in front of Prometheus must use the shared Codestra Keycloak identity surface and the black-and-white design language established by `appolon1908-hue/social.codestra.co`:
+Any approved human browser gateway in front of Prometheus must use the shared Codestra Keycloak identity surface and the black-and-white design language established by `ingtrader21-spec/social.codestra.co`:
 
 - page background: `#0b0b0b`;
 - auth panel: `#171717`;
@@ -17,7 +17,7 @@ Any approved human browser gateway in front of Prometheus must use the shared Co
 - visible keyboard focus and reduced-motion support;
 - no Starlink branding, images or copied assets.
 
-The shared identity implementation is owned by `appolon1908-hue/Keycloak`. A gateway may redirect users to that identity surface, but it must not collect a Codestra password itself.
+The shared identity implementation is owned by `ingtrader21-spec/Keycloak`. A gateway may redirect users to that identity surface, but it must not collect a Codestra password itself.
 
 ## Exposure and identity boundary
 

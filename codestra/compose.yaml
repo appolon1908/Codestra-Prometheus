@@ -42,7 +42,7 @@ services:
       retries: 5
       start_period: 20s
 
-  # Exporter source/configuration authority: appolon1908-hue/Codestra-Postgres-Exporter.
+  # Exporter source/configuration authority: ingtrader21-spec/Codestra-Postgres-Exporter.
   # This Compose entry is integration wiring only and must consume an accepted immutable artifact.
   postgres-exporter:
     image: ${POSTGRES_EXPORTER_IMAGE_REPOSITORY:?POSTGRES_EXPORTER_IMAGE_REPOSITORY is required}@sha256:${POSTGRES_EXPORTER_IMAGE_DIGEST:?POSTGRES_EXPORTER_IMAGE_DIGEST must be a 64-character lowercase hexadecimal digest}

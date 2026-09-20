@@ -97,7 +97,7 @@ jobs:
               assert annotations.get("summary"), rule["alert"]
               assert annotations.get("description"), rule["alert"]
               assert annotations.get("runbook_url", "").startswith(
-                  "https://github.com/appolon1908-hue/Codestra-Prometheus/"
+                  "https://github.com/ingtrader21-spec/Codestra-Prometheus/"
               ), rule["alert"]
           for forbidden in portfolio["forbiddenMetricLabels"]:
               assert forbidden not in recording_text
