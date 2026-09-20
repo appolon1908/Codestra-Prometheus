@@ -58,7 +58,8 @@ jobs:
           python -m py_compile \
             codestra/scripts/validate.py \
             codestra/scripts/validate_runtime_images.py \
-            codestra/scripts/probe_observability_integrations.py \n            codestra/scripts/target_inventory.py
+            codestra/scripts/probe_observability_integrations.py \
+            codestra/scripts/target_inventory.py
           python codestra/scripts/validate.py
           python codestra/scripts/validate_runtime_images.py
           python codestra/scripts/target_inventory.py --check codestra/target-inventory.v1.json
