@@ -111,9 +111,97 @@ scrape_configs:
       - source_labels: [probe_enabled]
         regex: "true"
         action: keep
+      # A target may select a reviewed safe module (GET/HEAD/DNS/TCP/TLS only);
+      # anything else keeps the default https_2xx module.
+      - source_labels: [probe_module]
+        regex: "(https_2xx|http_2xx_internal|tcp_connect|https_openbao_health|dns_a_record|tls_expiry)"
+        target_label: __param_module
       - source_labels: [__address__]
         target_label: __param_target
       - source_labels: [__param_target]
         target_label: instance
       - target_label: __address__
         replacement: blackbox-exporter:9115
+
+  # Middleware /metrics stays private and requires the monitoring-readonly
+  # Keycloak identity (scope metrics.read). The client secret is an
+  # OpenBao-rendered file (codestra/<env>/observability/prometheus/scrape-credentials/
+  # monitoring-readonly-client); nothing is committed here.
+  - job_name: codestra-middleware-metrics
+    scheme: http
+    metrics_path: /metrics
+    sample_limit: 100000
+    label_limit: 40
+    label_name_length_limit: 128
+    label_value_length_limit: 2048
+    body_size_limit: 16MB
+    oauth2:
+      client_id: monitoring-readonly
+      client_secret_file: /run/secrets/monitoring-readonly-client-secret
+      token_url: https://auth.codestra.co/realms/codestra/protocol/openid-connect/token
+      scopes: [metrics.read]
+    static_configs:
+      - targets: ["middleware-integration-api:8095"]
+        labels:
+          activation: active
+          job_class: backend
+          codestra_business: platform
+          environment: production
+          region: hetzner-eu
+          deployment: production-current
+          server: codestra-core-01
+          application: integration
+          service: middleware
+          tenant_scope: aggregate
+    relabel_configs:
+      - source_labels: [activation]
+        regex: active
+        action: keep
+    metric_relabel_configs:
+      - action: labeldrop
+        regex: '(?i)^(tenant_id|tenant_name|organization_id|organization_name|customer_id|customer_name|account_id|user_id|user_name|email|phone|consumer|workspace|token|secret|password|session_id|request_id|correlation_id|trace_id|span_id|lead_id|order_id|message_id|workflow_id|execution_id|webhook_id|idempotency_key|raw_path|path|uri|url|query|query_string|client_address|network_peer_address|db_statement|http_target|http_url|url_full|service_instance_id|host_id|container_id|image_id|process_pid|pod_uid|exception_message|id)$'
+
+  # OpenBao exposes its telemetry at /v1/sys/metrics?format=prometheus on the
+  # private observability listener behind mTLS. The bearer is a short-lived
+  # token minted by the prometheus-openbao role and rendered to a file outside
+  # Git; the policy grants sys/metrics read and nothing else. Pending until the
+  # OpenBao runtime is certified (Codestra-OpenBao runtimeApplyAuthorized).
+  - job_name: codestra-openbao
+    scheme: https
+    metrics_path: /v1/sys/metrics
+    sample_limit: 50000
+    label_limit: 40
+    label_name_length_limit: 128
+    label_value_length_limit: 2048
+    body_size_limit: 16MB
+    params:
+      format: [prometheus]
+    authorization:
+      type: Bearer
+      credentials_file: /run/secrets/openbao-prometheus-token
+    tls_config:
+      ca_file: /run/secrets/codestra-openbao-ca
+      cert_file: /run/secrets/openbao-prometheus-client-cert
+      key_file: /run/secrets/openbao-prometheus-client-key
+      server_name: codestra-bao-production-01
+      insecure_skip_verify: false
+    static_configs:
+      - targets: ["codestra-bao-production-01:8200"]
+        labels:
+          activation: pending
+          job_class: security
+          codestra_business: platform
+          environment: production
+          region: hetzner-eu
+          deployment: production-current
+          server: codestra-core-01
+          application: security
+          service: openbao
+          tenant_scope: aggregate
+    relabel_configs:
+      - source_labels: [activation]
+        regex: active
+        action: keep
+    metric_relabel_configs:
+      - action: labeldrop
+        regex: '(?i)^(token|secret|password|accessor|lease_id|request_id|path|mount_point|auth_display_name|id)$'
