@@ -1,0 +1,50 @@
+{
+  "schema": "codestra.observability-contract.v1",
+  "repository": "ingtrader21-spec/Codestra-Prometheus",
+  "component_class": "metrics-scraper-tsdb",
+  "business_effects_allowed": false,
+  "public_provider_effects_allowed": false,
+  "exposure": {
+    "metrics_public": false,
+    "internal_telemetry_public": false,
+    "public_ui_requires_gateway_and_identity": true
+  },
+  "canonical_pipeline": {
+    "metrics": "Prometheus",
+    "alerts": "Alertmanager",
+    "logs": "Loki",
+    "traces": "Tempo",
+    "collection": "Alloy/OpenTelemetry",
+    "operations_dashboards": "Grafana",
+    "analytics_dashboards": "Superset"
+  },
+  "existing_assets": {
+    "monitoring_integration_manifest": true,
+    "prometheus_reference": true,
+    "alertmanager_reference": true,
+    "loki_reference": false,
+    "tempo_reference": false,
+    "alloy_or_otel_reference": true,
+    "grafana_reference": false
+  },
+  "service_catalog": {
+    "register_with_middleware_services": true,
+    "required_fields": [
+      "service_id",
+      "owner",
+      "repository",
+      "environment",
+      "health_endpoint",
+      "metrics_endpoint",
+      "dependencies",
+      "slo",
+      "deployment_sha",
+      "status"
+    ]
+  },
+  "secrets": {
+    "mode": "references-only",
+    "authority": "OpenBao or governed secret files/environment references"
+  },
+  "status": "NORMALIZED_SOURCE_CONTRACT"
+}
