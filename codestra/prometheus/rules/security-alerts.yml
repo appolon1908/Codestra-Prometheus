@@ -13,7 +13,7 @@ groups:
         annotations:
           summary: "Authentication failures spiking for {{ $labels.codestra_business }}/{{ $labels.service }}"
           description: "Authentication failures exceed five per second."
-          runbook_url: "https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#slo-fast-burn"
+          runbook_url: "https://github.com/ingtrader21-spec/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#slo-fast-burn"
 
       - alert: CodestraAuthorizationDenialsSpike
         expr: sum without (reason, result) (codestra:authorization_denials:rate5m) > 5
@@ -27,7 +27,7 @@ groups:
         annotations:
           summary: "Authorization denials spiking for {{ $labels.codestra_business }}/{{ $labels.service }}"
           description: "Authorization denials exceed five per second."
-          runbook_url: "https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#slo-fast-burn"
+          runbook_url: "https://github.com/ingtrader21-spec/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#slo-fast-burn"
 
       - alert: CodestraIdempotencyConflictsHigh
         expr: sum without (operation) (codestra:idempotency_conflicts:rate5m) > 1
@@ -41,7 +41,7 @@ groups:
         annotations:
           summary: "Idempotency conflicts are elevated"
           description: "Conflicts exceed one per second for {{ $labels.codestra_business }}/{{ $labels.service }}."
-          runbook_url: "https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#slo-slow-burn"
+          runbook_url: "https://github.com/ingtrader21-spec/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#slo-slow-burn"
 
       - alert: CodestraReconciliationFailures
         expr: sum without (reconciliation) (codestra:reconciliation_failures:rate5m) > 0
@@ -55,7 +55,7 @@ groups:
         annotations:
           summary: "Reconciliation failures detected"
           description: "Reconciliation is failing for {{ $labels.codestra_business }}/{{ $labels.service }}."
-          runbook_url: "https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#slo-fast-burn"
+          runbook_url: "https://github.com/ingtrader21-spec/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#slo-fast-burn"
 
       - alert: CodestraExternalProviderFailures
         expr: sum without (provider, reason) (codestra:external_provider_failures:rate5m) > 0.2
@@ -69,7 +69,7 @@ groups:
         annotations:
           summary: "External provider failures elevated"
           description: "Provider failure rate exceeds 0.2/s for {{ $labels.codestra_business }}/{{ $labels.service }}."
-          runbook_url: "https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#slo-fast-burn"
+          runbook_url: "https://github.com/ingtrader21-spec/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#slo-fast-burn"
 
       - alert: CodestraUnapprovedLiveCapability
         expr: codestra_capability_state{risk_class="live_external_effect",mode="enabled",approval_state!="approved"} == 1
@@ -83,7 +83,7 @@ groups:
         annotations:
           summary: "Unapproved live capability enabled"
           description: "Capability {{ $labels.capability }} is enabled without approved activation evidence."
-          runbook_url: "https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#notification-failures"
+          runbook_url: "https://github.com/ingtrader21-spec/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#notification-failures"
 
       - alert: CodestraLiveCapabilityOutsideProduction
         expr: codestra_capability_state{risk_class="live_external_effect",mode="enabled",environment!="production"} == 1
@@ -97,4 +97,4 @@ groups:
         annotations:
           summary: "Live capability enabled outside production"
           description: "Capability {{ $labels.capability }} is enabled in {{ $labels.environment }}."
-          runbook_url: "https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#notification-failures"
+          runbook_url: "https://github.com/ingtrader21-spec/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#notification-failures"
