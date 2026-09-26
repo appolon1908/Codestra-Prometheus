@@ -1,20 +1,17 @@
-<!-- CODESTRA_AGENT_PROTOCOL_V1 -->
-## Codestra continuation contract
-
-Canonical protocol:
-https://github.com/ingtrader21-spec/codestra/blob/main/docs/AGENT-CONTINUATION-PROTOCOL.md
-
-Quick start:
-https://github.com/ingtrader21-spec/codestra/blob/main/docs/AGENT-QUICKSTART.md
-
-Before changing code:
-1. Read `.codestra-mission/*` when present.
-2. Read the active Linear issue and linked Notion architecture.
-3. Inspect exact Git branch/HEAD/dirty/worktree/upstream/PR/CI state.
-4. Preserve all existing local work.
-5. If acting as Builder, verify exclusive issue ownership and use a dedicated worktree.
-6. Do not invent or self-assign the next task.
-7. Update GitHub + Linear + Notion + the mission checkpoint before handoff.
-8. Do not cross the live-production approval boundary.
-
-The canonical protocol's no-loss, one-writer, protected-merge, checkpoint, and production-boundary rules are mandatory.
+# Mandatory agent entry contract
+Before changing product code run: bash scripts/agent_preflight.sh
+Canonical writable worktree: /home/codestra/Worktrees/monitoring-governed/Codestra-Prometheus
+Active branch: governance/single-lane-lock-20260926
+Rules:
+- Never develop on main, production, or detached HEAD.
+- Never start from a dirty tree.
+- Never reset, clean, stash, discard, force-push, or delete unproven history.
+- /home/codestra/Documents/GitHub/Codestra-Prometheus is reconciliation-only during this mission.
+- Upstream must be origin/governance/single-lane-lock-20260926 and remote SHA must match before publication.
+- Production effects remain fail-closed.
+- /metrics and /internal remain private.
+- Middleware V3 remains cross-system orchestration authority.
+- Certification order: preflight -> dependency install -> typecheck -> unit/security -> integration/migrations -> policy/mTLS -> signing/publisher -> build -> Docker/local API/Postman.
+- Publish only after green certification and remote-head compare-and-swap verification.
+- Record branch, SHA, PR, evidence, and continuation line in Linear/Notion.
+Continuation: cd '/home/codestra/Worktrees/monitoring-governed/Codestra-Prometheus' && bash scripts/agent_preflight.sh && bash scripts/monitoring_certify.sh

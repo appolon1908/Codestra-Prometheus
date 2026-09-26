@@ -1,0 +1,1 @@
+{"schema_version":"1.0","canonical_edge_path":"Caddy -> Kong -> Middleware V3 :8095 -> service API","private_paths":["/metrics","/internal"],"forwarded_identity_headers":["Authorization","X-Request-ID"],"production_effects_default":false}

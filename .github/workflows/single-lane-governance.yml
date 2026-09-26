@@ -1,0 +1,21 @@
+name: single-lane-governance
+on:
+  pull_request:
+  push:
+    branches: ['governance/**','development']
+permissions:
+  contents: read
+jobs:
+  governance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - name: Branch authority
+        shell: bash
+        run: |
+          expected="$(awk -F= '/^CODESTRA_ACTIVE_BRANCH=/{print $2}' .codestra/active-lane.env)"
+          actual="\${GITHUB_HEAD_REF:-\${GITHUB_REF_NAME}}"
+          test "$actual" = "$expected"
+      - run: bash scripts/policy_guard.sh
+      - run: git diff --check HEAD^ HEAD || git diff --check
