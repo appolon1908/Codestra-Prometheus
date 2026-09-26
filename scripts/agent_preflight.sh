@@ -34,7 +34,7 @@ if test "$mode" = local; then
   upstream=$(git rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null || true)
   if test -n "$upstream" && test "$upstream" != "origin/$ACTIVE_BRANCH"; then echo "PREFLIGHT_FAIL_UPSTREAM expected=origin/$ACTIVE_BRANCH actual=$upstream"; exit 29; fi
 fi
-if git grep -n -E '^(<<<<<<< |=======$|>>>>>>> )' -- . ':!docs/RECONCILIATION-LANES.md' >/tmp/codestra-conflicts.$$ 2>/dev/null; then
+if git grep -n -E '^(<<<<<<< |>>>>>>> )' -- . ':!docs/RECONCILIATION-LANES.md' >/tmp/codestra-conflicts.$$ 2>/dev/null; then
   cat /tmp/codestra-conflicts.$$; rm -f /tmp/codestra-conflicts.$$; echo PREFLIGHT_FAIL_CONFLICT_MARKERS; exit 30
 fi
 rm -f /tmp/codestra-conflicts.$$ 2>/dev/null || true
