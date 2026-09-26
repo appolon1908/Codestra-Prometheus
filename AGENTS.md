@@ -1,20 +1,20 @@
-<!-- CODESTRA_AGENT_PROTOCOL_V1 -->
-## Codestra continuation contract
+# Monitoring Single-Lane Agent Contract
 
-Canonical protocol:
-https://github.com/ingtrader21-spec/codestra/blob/main/docs/AGENT-CONTINUATION-PROTOCOL.md
+Mandatory entry: scripts/agent_preflight.sh
 
-Quick start:
-https://github.com/ingtrader21-spec/codestra/blob/main/docs/AGENT-QUICKSTART.md
+Repository: Codestra-Prometheus
+Canonical active worktree: /home/codestra/Worktrees/Monitoring-Active-20260926/Codestra-Prometheus
+Canonical branch: governance/single-active-lane-20260926
+Recorded base: main at b14518b2e2d4dd2a4773b583687a94dfec12cfb1
 
-Before changing code:
-1. Read `.codestra-mission/*` when present.
-2. Read the active Linear issue and linked Notion architecture.
-3. Inspect exact Git branch/HEAD/dirty/worktree/upstream/PR/CI state.
-4. Preserve all existing local work.
-5. If acting as Builder, verify exclusive issue ownership and use a dedicated worktree.
-6. Do not invent or self-assign the next task.
-7. Update GitHub + Linear + Notion + the mission checkpoint before handoff.
-8. Do not cross the live-production approval boundary.
+One-line continuation:
+cd /home/codestra/Worktrees/Monitoring-Active-20260926/Codestra-Prometheus && ./scripts/agent_preflight.sh
 
-The canonical protocol's no-loss, one-writer, protected-merge, checkpoint, and production-boundary rules are mandatory.
+Rules:
+- Work only in the canonical active worktree and active branch above.
+- Never edit protected main, detached HEAD, a dirty start, or a branch with the wrong upstream.
+- .codestra-mission/ACTIVE-LANE.env is authority; stale base SHA or wrong origin fails closed.
+- Preserve old lanes as read-only reconciliation evidence. Never reset, stash, discard, rewrite, force-push, or blindly delete history.
+- Never add public /metrics or /internal exposure, wildcard CORS, alternate public monitoring ports, or auth/correlation/audit-header bypasses.
+- Never add production-effect commands on this lane. Monitoring work remains read-only/no-effect.
+- Before publication run scripts/agent_preflight.sh --certify and perform a fresh remote-head compare-and-swap.

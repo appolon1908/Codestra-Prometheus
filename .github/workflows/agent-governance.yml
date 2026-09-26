@@ -1,0 +1,17 @@
+name: agent-governance
+on:
+  pull_request:
+  push:
+    branches:
+      - governance/single-active-lane-20260926
+permissions:
+  contents: read
+jobs:
+  single-lane-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Enforce Codestra monitoring lane
+        run: bash scripts/agent_preflight.sh --ci governance/single-active-lane-20260926 --certify
