@@ -18,3 +18,6 @@ Rules:
 - Never add public /metrics or /internal exposure, wildcard CORS, alternate public monitoring ports, or auth/correlation/audit-header bypasses.
 - Never add production-effect commands on this lane. Monitoring work remains read-only/no-effect.
 - Before publication run scripts/agent_preflight.sh --certify and perform a fresh remote-head compare-and-swap.
+
+## CODESTRA GLOBAL DEVELOPMENT GOVERNANCE v1.0
+Before editing, run scripts/agent_preflight.sh. The .governance authority files are machine authority. Preserve unknown or dirty historical work. Never reset, stash, force-push, develop on main/master, or enable production effects. Finish with scripts/agent_finish.sh. Certification uses scripts/certify.sh plus repository-specific deterministic gates. Publication is Appolon-only and requires explicit remote-SHA compare-and-swap verification.

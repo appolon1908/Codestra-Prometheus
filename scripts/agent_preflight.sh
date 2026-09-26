@@ -13,6 +13,12 @@ for arg in "$@"; do
     *) echo "PREFLIGHT_FAIL_ARG=$arg"; exit 19 ;;
   esac
 done
+# CODESTRA_GLOBAL_GOVERNANCE_V1
+for required in .governance/repository.yaml .governance/workstation-policy.yaml .governance/authority.json scripts/worktree_guard.sh scripts/agent_finish.sh scripts/certify.sh scripts/reconcile.sh; do
+ test -f "$required" || { echo "PREFLIGHT_FAIL_GOVERNANCE_FILE=$required"; exit 18; }
+done
+if env | grep -q '^ALLOW_PRODUCTION_EFFECTS=1$'; then echo PREFLIGHT_FAIL_PRODUCTION_EFFECTS_ENABLED; exit 17; fi
+if test "$mode" = local; then scripts/worktree_guard.sh; fi
 authority="$root/.codestra-mission/ACTIVE-LANE.env"
 test -f "$authority" || { echo PREFLIGHT_FAIL_AUTHORITY_MISSING; exit 20; }
 . "$authority"
@@ -32,7 +38,7 @@ if git show-ref --verify --quiet "$tracking"; then
 fi
 if test "$mode" = local; then
   upstream=$(git rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null || true)
-  if test -n "$upstream" && test "$upstream" != "origin/$ACTIVE_BRANCH"; then echo "PREFLIGHT_FAIL_UPSTREAM expected=origin/$ACTIVE_BRANCH actual=$upstream"; exit 29; fi
+  if test -n "$upstream" && test "$upstream" != "origin/$BASE_REF"; then echo "PREFLIGHT_FAIL_UPSTREAM expected=origin/$BASE_REF actual=$upstream"; exit 29; fi
 fi
 if git grep -n -E '^(<<<<<<< |>>>>>>> )' -- . ':!docs/RECONCILIATION-LANES.md' >/tmp/codestra-conflicts.$$ 2>/dev/null; then
   cat /tmp/codestra-conflicts.$$; rm -f /tmp/codestra-conflicts.$$; echo PREFLIGHT_FAIL_CONFLICT_MARKERS; exit 30
