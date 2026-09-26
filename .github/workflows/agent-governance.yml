@@ -1,0 +1,17 @@
+name: agent-governance
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  single-lane-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Enforce single-lane authority
+        shell: bash
+        run: bash scripts/agent_preflight.sh --ci
