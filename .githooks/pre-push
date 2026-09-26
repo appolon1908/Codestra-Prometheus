@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+root=$(git rev-parse --show-toplevel)
+. "$root/.codestra-mission/ACTIVE-LANE.env"
+branch=$(git branch --show-current)
+test "$branch" = "$ACTIVE_BRANCH" || { echo "CODESTRA_PUSH_BLOCKED_WRONG_BRANCH expected=$ACTIVE_BRANCH actual=$branch"; exit 70; }
+test "\${CODESTRA_PUBLISH_AUTHORIZED:-0}" = 1 || {
+  echo "CODESTRA_PUSH_BLOCKED: set CODESTRA_PUBLISH_AUTHORIZED=1 only after fresh remote-head CAS and explicit publication authorization"
+  exit 71
+}
+remote_sha=$(git ls-remote origin "refs/heads/$BASE_REF" | awk '{print $1}')
+test -n "$remote_sha" || { echo CODESTRA_PUSH_BLOCKED_REMOTE_UNREADABLE; exit 72; }
+test "$remote_sha" = "$BASE_SHA" || {
+  echo "CODESTRA_PUSH_BLOCKED_STALE_BASE expected=$BASE_SHA remote=$remote_sha"; exit 73;
+}
+echo CODESTRA_PREPUSH_CAS_PASS
