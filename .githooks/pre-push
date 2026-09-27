@@ -11,7 +11,7 @@ test -f "$authority" || { echo CODESTRA_PUSH_BLOCKED_AUTHORITY_MISSING; exit 71;
 . "$authority"
 branch=$(git branch --show-current)
 test "$branch" = "$ACTIVE_BRANCH" || { echo "CODESTRA_PUSH_BLOCKED_WRONG_BRANCH expected=$ACTIVE_BRANCH actual=$branch"; exit 72; }
-test "\${CODESTRA_PUBLISH_AUTHORIZED:-0}" = 1 || {
+test "${CODESTRA_PUBLISH_AUTHORIZED:-0}" = 1 || {
   echo "CODESTRA_PUSH_BLOCKED: explicit publication authorization and fresh CAS required"
   exit 73
 }
