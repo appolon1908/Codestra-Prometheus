@@ -1,0 +1,22 @@
+name: Codestra Candidate CD
+on:
+  push:
+    branches: [staging]
+  workflow_dispatch:
+permissions: {contents: read}
+jobs:
+  certify-candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: ./scripts/codestra-ci.sh all
+      - shell: bash
+        run: |
+          set -euo pipefail
+          if [ -f Dockerfile ]; then docker build --pull=false --tag "codestra-candidate:${GITHUB_SHA}" .; else echo 'No root Dockerfile; repository packaging remains authoritative.'; fi
+      - shell: bash
+        run: printf '{"repository":"%s","sha":"%s","ref":"%s","production_deployed":false}\n' "$GITHUB_REPOSITORY" "$GITHUB_SHA" "$GITHUB_REF"
+      - run: echo 'Candidate certified only. Production activation requires explicit governed approval.'
