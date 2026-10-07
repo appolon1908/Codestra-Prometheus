@@ -1,0 +1,140 @@
+repository: appolon1908/Codestra-Prometheus
+governance_branch: workstation/governance-control-plane
+promotion_chain: [development, testing, staging, production]
+workstations:
+  - branch: workstation/dev-desktop
+    kind: section
+    status: NOT_STARTED
+    required_gates: [lint, unit, integration, contract, security, clean_tree, remote_sha_match, ci_exact_sha, review]
+  - branch: workstation/governance-control-plane
+    kind: section
+    status: NOT_STARTED
+    required_gates: [lint, unit, integration, contract, security, clean_tree, remote_sha_match, ci_exact_sha, review]
+  - branch: workstation/ws01-core
+    kind: section
+    status: NOT_STARTED
+    required_gates: [lint, unit, integration, contract, security, clean_tree, remote_sha_match, ci_exact_sha, review]
+  - branch: workstation/ws02-api
+    kind: section
+    status: NOT_STARTED
+    required_gates: [lint, unit, integration, contract, security, clean_tree, remote_sha_match, ci_exact_sha, review]
+  - branch: workstation/ws03-security
+    kind: section
+    status: NOT_STARTED
+    required_gates: [lint, unit, integration, contract, security, clean_tree, remote_sha_match, ci_exact_sha, review]
+  - branch: workstation/ws04-deployment
+    kind: section
+    status: NOT_STARTED
+    required_gates: [lint, unit, integration, contract, security, clean_tree, remote_sha_match, ci_exact_sha, review]
+  - branch: workstation/ws05-observability
+    kind: section
+    status: NOT_STARTED
+    required_gates: [lint, unit, integration, contract, security, clean_tree, remote_sha_match, ci_exact_sha, review]
+  - branch: workstation/ws06-testing
+    kind: section
+    status: NOT_STARTED
+    required_gates: [lint, unit, integration, contract, security, clean_tree, remote_sha_match, ci_exact_sha, review]
+  - branch: workstation/ws07-saas
+    kind: section
+    status: NOT_STARTED
+    required_gates: [lint, unit, integration, contract, security, clean_tree, remote_sha_match, ci_exact_sha, review]
+  - branch: workstation/ws08-release
+    kind: section
+    status: NOT_STARTED
+    required_gates: [lint, unit, integration, contract, security, clean_tree, remote_sha_match, ci_exact_sha, review]
+  - branch: subworkstation/ws01-core/01-upstream-runtime
+    kind: subsection
+    status: NOT_STARTED
+    required_gates: [lint, unit, integration, contract, security, clean_tree, remote_sha_match, ci_exact_sha, review]
+  - branch: subworkstation/ws01-core/02-config-contracts
+    kind: subsection
+    status: NOT_STARTED
+    required_gates: [lint, unit, integration, contract, security, clean_tree, remote_sha_match, ci_exact_sha, review]
+  - branch: subworkstation/ws01-core/03-data-model
+    kind: subsection
+    status: NOT_STARTED
+    required_gates: [lint, unit, integration, contract, security, clean_tree, remote_sha_match, ci_exact_sha, review]
+  - branch: subworkstation/ws02-api/01-openapi
+    kind: subsection
+    status: NOT_STARTED
+    required_gates: [lint, unit, integration, contract, security, clean_tree, remote_sha_match, ci_exact_sha, review]
+  - branch: subworkstation/ws02-api/02-postman-sdk
+    kind: subsection
+    status: NOT_STARTED
+    required_gates: [lint, unit, integration, contract, security, clean_tree, remote_sha_match, ci_exact_sha, review]
+  - branch: subworkstation/ws02-api/03-auth-contracts
+    kind: subsection
+    status: NOT_STARTED
+    required_gates: [lint, unit, integration, contract, security, clean_tree, remote_sha_match, ci_exact_sha, review]
+  - branch: subworkstation/ws03-security/01-identity-rbac
+    kind: subsection
+    status: NOT_STARTED
+    required_gates: [lint, unit, integration, contract, security, clean_tree, remote_sha_match, ci_exact_sha, review]
+  - branch: subworkstation/ws03-security/02-secrets-tls
+    kind: subsection
+    status: NOT_STARTED
+    required_gates: [lint, unit, integration, contract, security, clean_tree, remote_sha_match, ci_exact_sha, review]
+  - branch: subworkstation/ws03-security/03-supply-chain
+    kind: subsection
+    status: NOT_STARTED
+    required_gates: [lint, unit, integration, contract, security, clean_tree, remote_sha_match, ci_exact_sha, review]
+  - branch: subworkstation/ws04-deployment/01-docker-compose
+    kind: subsection
+    status: NOT_STARTED
+    required_gates: [lint, unit, integration, contract, security, clean_tree, remote_sha_match, ci_exact_sha, review]
+  - branch: subworkstation/ws04-deployment/02-kubernetes-helm
+    kind: subsection
+    status: NOT_STARTED
+    required_gates: [lint, unit, integration, contract, security, clean_tree, remote_sha_match, ci_exact_sha, review]
+  - branch: subworkstation/ws04-deployment/03-environments
+    kind: subsection
+    status: NOT_STARTED
+    required_gates: [lint, unit, integration, contract, security, clean_tree, remote_sha_match, ci_exact_sha, review]
+  - branch: subworkstation/ws05-observability/01-metrics
+    kind: subsection
+    status: NOT_STARTED
+    required_gates: [lint, unit, integration, contract, security, clean_tree, remote_sha_match, ci_exact_sha, review]
+  - branch: subworkstation/ws05-observability/02-logs-traces
+    kind: subsection
+    status: NOT_STARTED
+    required_gates: [lint, unit, integration, contract, security, clean_tree, remote_sha_match, ci_exact_sha, review]
+  - branch: subworkstation/ws05-observability/03-slo-alerts
+    kind: subsection
+    status: NOT_STARTED
+    required_gates: [lint, unit, integration, contract, security, clean_tree, remote_sha_match, ci_exact_sha, review]
+  - branch: subworkstation/ws06-testing/01-unit-contract
+    kind: subsection
+    status: NOT_STARTED
+    required_gates: [lint, unit, integration, contract, security, clean_tree, remote_sha_match, ci_exact_sha, review]
+  - branch: subworkstation/ws06-testing/02-integration-e2e
+    kind: subsection
+    status: NOT_STARTED
+    required_gates: [lint, unit, integration, contract, security, clean_tree, remote_sha_match, ci_exact_sha, review]
+  - branch: subworkstation/ws06-testing/03-performance-dr
+    kind: subsection
+    status: NOT_STARTED
+    required_gates: [lint, unit, integration, contract, security, clean_tree, remote_sha_match, ci_exact_sha, review]
+  - branch: subworkstation/ws07-saas/01-tenancy-provisioning
+    kind: subsection
+    status: NOT_STARTED
+    required_gates: [lint, unit, integration, contract, security, clean_tree, remote_sha_match, ci_exact_sha, review]
+  - branch: subworkstation/ws07-saas/02-quotas-metering
+    kind: subsection
+    status: NOT_STARTED
+    required_gates: [lint, unit, integration, contract, security, clean_tree, remote_sha_match, ci_exact_sha, review]
+  - branch: subworkstation/ws07-saas/03-billing-admin
+    kind: subsection
+    status: NOT_STARTED
+    required_gates: [lint, unit, integration, contract, security, clean_tree, remote_sha_match, ci_exact_sha, review]
+  - branch: subworkstation/ws08-release/01-ci
+    kind: subsection
+    status: NOT_STARTED
+    required_gates: [lint, unit, integration, contract, security, clean_tree, remote_sha_match, ci_exact_sha, review]
+  - branch: subworkstation/ws08-release/02-candidate-certification
+    kind: subsection
+    status: NOT_STARTED
+    required_gates: [lint, unit, integration, contract, security, clean_tree, remote_sha_match, ci_exact_sha, review]
+  - branch: subworkstation/ws08-release/03-promotion-rollback
+    kind: subsection
+    status: NOT_STARTED
+    required_gates: [lint, unit, integration, contract, security, clean_tree, remote_sha_match, ci_exact_sha, review]
