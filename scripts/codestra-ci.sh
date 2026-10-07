@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -euo pipefail
+mode=${1:-all}
+contract(){ echo '[contract] checking merge markers and JSON contracts'; if git grep -nE '^(<<<<<<<|=======|>>>>>>>)' -- ':!upstream/**' ':!vendor/**' ':!node_modules/**'; then echo 'merge conflict markers found'; return 1; fi; for f in monitoring-integration.v1.json CODESTRA_UPSTREAM.json CODESTRA_UPSTREAM_LOCK.json; do [ ! -f "$f" ] || python3 -m json.tool "$f" >/dev/null; done; }
+security(){ echo '[security] basic tracked-file private-key guard'; if git grep -nE 'BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY' -- ':!upstream/**' ':!vendor/**' ':!tests/fixtures/**'; then echo 'private key material detected'; return 1; fi; }
+tests(){ if [ -d tests ] && find tests -maxdepth 2 -type f -name 'test_*.py' -print -quit | grep -q .; then python3 -m unittest discover -s tests -p 'test_*.py'; else echo '[test] no repository-local Python unittest suite detected'; fi; }
+compose(){ if ! command -v docker >/dev/null 2>&1 || ! docker compose version >/dev/null 2>&1; then echo '[compose] docker compose unavailable; skip'; return 0; fi; mapfile -t files < <(find . -maxdepth 3 -type f \( -name 'compose.yml' -o -name 'compose.yaml' -o -name 'docker-compose.yml' -o -name 'docker-compose.yaml' -o -name 'docker-compose.*.yml' -o -name 'docker-compose.*.yaml' \) -not -path './upstream/*' -not -path './vendor/*' | sort); if [ ${#files[@]} -eq 0 ]; then echo '[compose] no repository-local compose files'; return 0; fi; for f in "${files[@]}"; do echo "[compose] validating $f"; docker compose -f "$f" config -q; done; }
+case "$mode" in contract) contract;; security) security;; tests) tests;; compose) compose;; all) contract;security;tests;compose;; *) exit 2;; esac
