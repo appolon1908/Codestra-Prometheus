@@ -1,0 +1,49 @@
+name: Codestra Corporate CI
+on:
+  pull_request:
+    branches: [development, test, testing, staging, production, main]
+  push:
+    branches: [development, test, testing, staging]
+  workflow_dispatch:
+permissions: {contents: read}
+concurrency:
+  group: codestra-ci-${{ github.repository }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: ./scripts/codestra-ci.sh contract
+      - run: ./scripts/codestra-ci.sh security
+  repository-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: ./scripts/codestra-ci.sh tests
+  compose-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - run: ./scripts/codestra-ci.sh compose
+  postman-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '20'}
+      - shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t collections < <(find postman -type f -name '*.postman_collection.json' 2>/dev/null | sort || true)
+          if [ ${#collections[@]} -eq 0 ]; then echo 'No Postman collections; pass.'; exit 0; fi
+          npm install --global newman@6.2.2
+          for c in "${collections[@]}"; do newman run "$c" --bail; done
