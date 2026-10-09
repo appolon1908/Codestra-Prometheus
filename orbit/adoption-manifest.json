@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "2.0.0",
+  "repository": "appolon1908-hue/Codestra-Prometheus",
+  "classification": "observability-backend",
+  "targetBranch": "codex/codestra-orbit-v2-codestra-prometheus",
+  "adoptionMode": "n/a-no-rendered-interface",
+  "domain": null,
+  "domainStatus": "not-applicable",
+  "requirements": {
+    "noFabricatedBrowserUi": true,
+    "privateRouting": true,
+    "identityBoundary": true,
+    "supportedBrandingOnly": true,
+    "immutableArtifacts": true,
+    "monitoring": true,
+    "rollback": true
+  },
+  "status": "branch-created",
+  "blockers": [
+    "Verify private ingress, scrape authorization, rules, retention, service discovery, immutable version, monitoring, and rollback.",
+    "Presentation remains in an approved protected operator UI; do not create customer login, logout, header, footer, or public content endpoints here."
+  ]
+}
