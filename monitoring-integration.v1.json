@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "repository": "ingtrader21-spec/Codestra-Prometheus",
+  "design_group": "Monitoring",
+  "monitoring_profile": "native-component",
+  "controller_repository": "ingtrader21-spec/Middleware-",
+  "activation_enabled": false,
+  "contract_authority": {
+    "repository": "ingtrader21-spec/Middleware-",
+    "path": "contracts/observability/odoo-sync.v1.json",
+    "api_owner": "ingtrader21-spec/Middleware-",
+    "business_record_owner": "ingtrader21-spec/Odoo"
+  },
+  "kyyow_observability_sync": {
+    "role": "metric-authority",
+    "middleware_write_boundary": "Middleware Odoo result worker",
+    "middleware_routes": [
+      "/v1/observability/kpis"
+    ],
+    "direct_odoo_write": false,
+    "odoo_write_authority": "Middleware only",
+    "projection_payload_forbidden": [
+      "raw Prometheus samples",
+      "raw logs or traces",
+      "Alertmanager notification bodies",
+      "message bodies",
+      "phone numbers",
+      "email addresses",
+      "access tokens",
+      "secrets",
+      "private keys"
+    ]
+  }
+}

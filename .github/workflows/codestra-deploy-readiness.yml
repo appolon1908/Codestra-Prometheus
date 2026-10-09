@@ -1,0 +1,38 @@
+name: Codestra deploy readiness
+
+on:
+  pull_request:
+    branches: ["**"]
+  push:
+    branches: ["**"]
+  workflow_dispatch:
+    inputs:
+      operation:
+        required: true
+        type: choice
+        default: verify
+        options: [verify, release, deploy-staging-readonly, certify-staging-readonly, promote-production-readonly]
+      confirmation:
+        required: false
+        type: string
+        default: ""
+      canary_percent:
+        required: false
+        type: string
+        default: "1"
+
+permissions:
+  actions: read
+  contents: write
+  id-token: write
+
+jobs:
+  deploy-readiness:
+    uses: ingtrader21-spec/Infustruction-repo/.github/workflows/reusable-codestra-upstream-deploy-readiness.yml@92f731039333846ef067f1ddbcb276463a92d9ba
+    with:
+      repository_class: observability-overlay
+      runtime_deployable: true
+      health_paths: "/-/healthy,/-/ready"
+      operation: ${{ github.event_name == 'workflow_dispatch' && inputs.operation || 'verify' }}
+      confirmation: ${{ github.event_name == 'workflow_dispatch' && inputs.confirmation || '' }}
+      canary_percent: ${{ github.event_name == 'workflow_dispatch' && inputs.canary_percent || '1' }}
