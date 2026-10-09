@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+set -euo pipefail
+root=$(git rev-parse --show-toplevel)
+canonical=$(git config --get codestra.canonicalWorktree || true)
+test -n "$canonical" || { echo CODESTRA_PUSH_BLOCKED_CANONICAL_UNSET; exit 69; }
+actual_root=$(realpath "$root")
+expected_root=$(realpath "$canonical")
+test "$actual_root" = "$expected_root" || { echo "CODESTRA_PUSH_BLOCKED_WRONG_WORKTREE expected=$expected_root actual=$actual_root"; exit 70; }
+authority="$canonical/.codestra-mission/ACTIVE-LANE.env"
+test -f "$authority" || { echo CODESTRA_PUSH_BLOCKED_AUTHORITY_MISSING; exit 71; }
+. "$authority"
+branch=$(git branch --show-current)
+test "$branch" = "$ACTIVE_BRANCH" || { echo "CODESTRA_PUSH_BLOCKED_WRONG_BRANCH expected=$ACTIVE_BRANCH actual=$branch"; exit 72; }
+test "${CODESTRA_PUBLISH_AUTHORIZED:-0}" = 1 || {
+  echo "CODESTRA_PUSH_BLOCKED: explicit publication authorization and fresh CAS required"
+  exit 73
+}
+remote_sha=$(git ls-remote origin "refs/heads/$BASE_REF" | awk '{print $1}')
+test -n "$remote_sha" || { echo CODESTRA_PUSH_BLOCKED_REMOTE_UNREADABLE; exit 74; }
+test "$remote_sha" = "$BASE_SHA" || { echo "CODESTRA_PUSH_BLOCKED_STALE_BASE expected=$BASE_SHA remote=$remote_sha"; exit 75; }
+echo CODESTRA_PREPUSH_CAS_PASS
