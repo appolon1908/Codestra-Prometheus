@@ -1,6 +1,6 @@
 # Codestra Prometheus Authority
 
-Principal repository: `appolon1908-hue/Codestra-Prometheus`
+Principal repository: `ingtrader21-spec/Codestra-Prometheus`
 
 Canonical service host: `prom.codestra.media`
 Canonical DNS target: `37.27.128.39`

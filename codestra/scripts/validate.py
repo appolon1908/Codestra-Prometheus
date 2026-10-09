@@ -553,18 +553,18 @@ def validate_observability_api_contract() -> None:
         fail(f"observability API service set mismatch: {sorted(set(services) ^ required)}")
 
     expected_authorities = {
-        "prometheus": "appolon1908-hue/Codestra-Prometheus",
-        "alertmanager": "appolon1908-hue/Codestra-Alertmanager",
-        "telemetry": "appolon1908-hue/Codestra-Telemetry",
-        "loki": "appolon1908-hue/Codestra-Loki",
-        "tempo": "appolon1908-hue/Codestra-Tempo",
-        "grafana": "appolon1908-hue/Codestra-Grafana-",
-        "alloy": "appolon1908-hue/Codestra-Alloy",
-        "node_exporter": "appolon1908-hue/Codestra-Node-Exporter",
-        "cadvisor": "appolon1908-hue/Codestra-cAdvisor",
-        "postgres_exporter": "appolon1908-hue/Codestra-Postgres-Exporter",
-        "redis_exporter": "appolon1908-hue/Codestra-Redis-Exporter",
-        "blackbox_exporter": "appolon1908-hue/Codestra-Blackbox-Exporter",
+        "prometheus": "ingtrader21-spec/Codestra-Prometheus",
+        "alertmanager": "ingtrader21-spec/Codestra-Alertmanager",
+        "telemetry": "ingtrader21-spec/Codestra-Telemetry",
+        "loki": "ingtrader21-spec/Codestra-Loki",
+        "tempo": "ingtrader21-spec/Codestra-Tempo",
+        "grafana": "ingtrader21-spec/Codestra-Grafana-",
+        "alloy": "ingtrader21-spec/Codestra-Alloy",
+        "node_exporter": "ingtrader21-spec/Codestra-Node-Exporter",
+        "cadvisor": "ingtrader21-spec/Codestra-cAdvisor",
+        "postgres_exporter": "ingtrader21-spec/Codestra-Postgres-Exporter",
+        "redis_exporter": "ingtrader21-spec/Codestra-Redis-Exporter",
+        "blackbox_exporter": "ingtrader21-spec/Codestra-Blackbox-Exporter",
     }
     for name, authority in expected_authorities.items():
         if services[name].get("authority") != authority:

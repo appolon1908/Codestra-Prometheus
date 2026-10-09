@@ -15,7 +15,7 @@ groups:
         annotations:
           summary: Codestra alerting watchdog is alive
           description: This continuously firing alert proves the Prometheus to Alertmanager control path remains active.
-          runbook_url: https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/runtime-v1/RUNBOOKS.md#codestrawatchdog
+          runbook_url: https://github.com/ingtrader21-spec/Codestra-Prometheus/blob/main/codestra/runtime-v1/RUNBOOKS.md#codestrawatchdog
 
   - name: codestra.corporate.availability
     interval: 30s
@@ -30,7 +30,7 @@ groups:
         annotations:
           summary: '{{ $labels.service }} scrape target is down'
           description: 'Prometheus cannot scrape {{ $labels.instance }} for business {{ $labels.codestra_business }} in {{ $labels.environment }}.'
-          runbook_url: https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/runtime-v1/RUNBOOKS.md#codestratargetdown
+          runbook_url: https://github.com/ingtrader21-spec/Codestra-Prometheus/blob/main/codestra/runtime-v1/RUNBOOKS.md#codestratargetdown
       - alert: CodestraBlackboxProbeFailed
         expr: probe_success == 0
         for: 5m
@@ -41,7 +41,7 @@ groups:
         annotations:
           summary: '{{ $labels.service }} synthetic probe is failing'
           description: 'The approved {{ $labels.module }} probe for {{ $labels.instance }} has failed for five minutes.'
-          runbook_url: https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/runtime-v1/RUNBOOKS.md#codestrablackboxprobefailed
+          runbook_url: https://github.com/ingtrader21-spec/Codestra-Prometheus/blob/main/codestra/runtime-v1/RUNBOOKS.md#codestrablackboxprobefailed
       - alert: CodestraPrometheusReloadFailed
         expr: prometheus_config_last_reload_successful == 0
         for: 5m
@@ -55,7 +55,7 @@ groups:
         annotations:
           summary: Prometheus configuration reload failed
           description: Prometheus rejected the latest configuration or rule reload; the prior configuration may still be active.
-          runbook_url: https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/runtime-v1/RUNBOOKS.md#codestraprometheusreloadfailed
+          runbook_url: https://github.com/ingtrader21-spec/Codestra-Prometheus/blob/main/codestra/runtime-v1/RUNBOOKS.md#codestraprometheusreloadfailed
 
   - name: codestra.corporate.slo
     interval: 30s
@@ -73,7 +73,7 @@ groups:
         annotations:
           summary: '{{ $labels.service }} is rapidly consuming its error budget'
           description: 'Both the 5-minute and 1-hour burn-rate windows are above the fast-burn thresholds for {{ $labels.codestra_business }} in {{ $labels.environment }}.'
-          runbook_url: https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/runtime-v1/RUNBOOKS.md#codestraslofastburn
+          runbook_url: https://github.com/ingtrader21-spec/Codestra-Prometheus/blob/main/codestra/runtime-v1/RUNBOOKS.md#codestraslofastburn
       - alert: CodestraSLOSustainedBurn
         expr: codestra:slo_error_budget_burn1h > 3
         for: 2h
@@ -84,7 +84,7 @@ groups:
         annotations:
           summary: '{{ $labels.service }} has a sustained error-budget burn'
           description: 'The one-hour burn rate has remained above 3x for two hours for {{ $labels.codestra_business }} in {{ $labels.environment }}.'
-          runbook_url: https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/runtime-v1/RUNBOOKS.md#codestraslosustainedburn
+          runbook_url: https://github.com/ingtrader21-spec/Codestra-Prometheus/blob/main/codestra/runtime-v1/RUNBOOKS.md#codestraslosustainedburn
 
   - name: codestra.corporate.capacity-and-workers
     interval: 30s
@@ -99,7 +99,7 @@ groups:
         annotations:
           summary: '{{ $labels.queue }} queue is above 80 percent capacity'
           description: 'Queue saturation is sustained for {{ $labels.service }} in {{ $labels.environment }}.'
-          runbook_url: https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/runtime-v1/RUNBOOKS.md#codestraqueuesaturation
+          runbook_url: https://github.com/ingtrader21-spec/Codestra-Prometheus/blob/main/codestra/runtime-v1/RUNBOOKS.md#codestraqueuesaturation
       - alert: CodestraWorkerFailures
         expr: codestra:worker_failure_rate5m > 0
         for: 10m
@@ -110,7 +110,7 @@ groups:
         annotations:
           summary: '{{ $labels.worker_class }} workers are failing'
           description: 'Worker failures continue for {{ $labels.service }} in {{ $labels.environment }}.'
-          runbook_url: https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/runtime-v1/RUNBOOKS.md#codestraworkerfailures
+          runbook_url: https://github.com/ingtrader21-spec/Codestra-Prometheus/blob/main/codestra/runtime-v1/RUNBOOKS.md#codestraworkerfailures
       - alert: CodestraContainerOOM
         expr: increase(container_oom_events_total[10m]) > 0
         labels:
@@ -120,7 +120,7 @@ groups:
         annotations:
           summary: 'Container {{ $labels.container }} was terminated by the OOM killer'
           description: 'An out-of-memory event occurred for {{ $labels.service }} on {{ $labels.server }}.'
-          runbook_url: https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/runtime-v1/RUNBOOKS.md#codestracontaineroom
+          runbook_url: https://github.com/ingtrader21-spec/Codestra-Prometheus/blob/main/codestra/runtime-v1/RUNBOOKS.md#codestracontaineroom
       - alert: CodestraRedisUnavailable
         expr: redis_up == 0
         for: 3m
@@ -131,7 +131,7 @@ groups:
         annotations:
           summary: 'Redis instance {{ $labels.redis_instance }} is unavailable'
           description: 'The dedicated Redis Exporter cannot reach its approved Redis instance for {{ $labels.codestra_business }}.'
-          runbook_url: https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/runtime-v1/RUNBOOKS.md#codestraredisunavailable
+          runbook_url: https://github.com/ingtrader21-spec/Codestra-Prometheus/blob/main/codestra/runtime-v1/RUNBOOKS.md#codestraredisunavailable
       - alert: CodestraRedisEvictions
         expr: rate(redis_evicted_keys_total[5m]) > 0
         for: 10m
@@ -142,7 +142,7 @@ groups:
         annotations:
           summary: 'Redis instance {{ $labels.redis_instance }} is evicting keys'
           description: 'Sustained evictions indicate memory pressure or an incorrect maxmemory policy.'
-          runbook_url: https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/runtime-v1/RUNBOOKS.md#codestraredisevictions
+          runbook_url: https://github.com/ingtrader21-spec/Codestra-Prometheus/blob/main/codestra/runtime-v1/RUNBOOKS.md#codestraredisevictions
 
   - name: codestra.corporate.recovery-and-certificates
     interval: 60s
@@ -157,7 +157,7 @@ groups:
         annotations:
           summary: '{{ $labels.class }} backup evidence is stale'
           description: 'No successful {{ $labels.class }} backup has been recorded for more than 26 hours on {{ $labels.server }}.'
-          runbook_url: https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/runtime-v1/RUNBOOKS.md#codestrabackupstale
+          runbook_url: https://github.com/ingtrader21-spec/Codestra-Prometheus/blob/main/codestra/runtime-v1/RUNBOOKS.md#codestrabackupstale
       - alert: CodestraRestoreValidationStale
         expr: |
           (codestra:restore_validation_age_seconds > 604800)
@@ -179,7 +179,7 @@ groups:
         annotations:
           summary: Restore-validation evidence is older than seven days
           description: 'Recovery proof for {{ $labels.service }} on {{ $labels.server }} is stale or missing.'
-          runbook_url: https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/runtime-v1/RUNBOOKS.md#codestrarestorevalidationstale
+          runbook_url: https://github.com/ingtrader21-spec/Codestra-Prometheus/blob/main/codestra/runtime-v1/RUNBOOKS.md#codestrarestorevalidationstale
       - alert: CodestraConfigurationDrift
         expr: codestra_configuration_drift == 1
         for: 10m
@@ -190,7 +190,7 @@ groups:
         annotations:
           summary: Reviewed configuration differs from deployed state
           description: 'Configuration drift is present for {{ $labels.service }} on {{ $labels.server }}.'
-          runbook_url: https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/runtime-v1/RUNBOOKS.md#codestraconfigurationdrift
+          runbook_url: https://github.com/ingtrader21-spec/Codestra-Prometheus/blob/main/codestra/runtime-v1/RUNBOOKS.md#codestraconfigurationdrift
       - alert: CodestraCertificateExpiringSoon
         expr: codestra:certificate_seconds_to_expiry < 1814400
         for: 30m
@@ -201,7 +201,7 @@ groups:
         annotations:
           summary: '{{ $labels.class }} certificate expires within 21 days'
           description: 'Certificate renewal evidence is required for {{ $labels.service }} on {{ $labels.server }}.'
-          runbook_url: https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/runtime-v1/RUNBOOKS.md#codestracertificateexpiringsoon
+          runbook_url: https://github.com/ingtrader21-spec/Codestra-Prometheus/blob/main/codestra/runtime-v1/RUNBOOKS.md#codestracertificateexpiringsoon
       - alert: CodestraCertificateExpiringCritical
         expr: codestra:certificate_seconds_to_expiry < 604800
         for: 15m
@@ -212,7 +212,7 @@ groups:
         annotations:
           summary: '{{ $labels.class }} certificate expires within seven days'
           description: 'Immediate renewal or traffic-migration action is required for {{ $labels.service }} on {{ $labels.server }}.'
-          runbook_url: https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/runtime-v1/RUNBOOKS.md#codestracertificateexpiringcritical
+          runbook_url: https://github.com/ingtrader21-spec/Codestra-Prometheus/blob/main/codestra/runtime-v1/RUNBOOKS.md#codestracertificateexpiringcritical
       - alert: CodestraProbeCertificateExpiringSoon
         expr: codestra:probe_certificate_seconds_to_expiry < 1814400
         for: 30m
@@ -223,4 +223,4 @@ groups:
         annotations:
           summary: 'Public certificate for {{ $labels.instance }} expires within 21 days'
           description: 'Blackbox Exporter detected an approaching TLS expiry for {{ $labels.codestra_business }}.'
-          runbook_url: https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/runtime-v1/RUNBOOKS.md#codestraprobecertificateexpiringsoon
+          runbook_url: https://github.com/ingtrader21-spec/Codestra-Prometheus/blob/main/codestra/runtime-v1/RUNBOOKS.md#codestraprobecertificateexpiringsoon
