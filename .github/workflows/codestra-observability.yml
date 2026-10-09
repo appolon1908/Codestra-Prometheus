@@ -74,11 +74,13 @@ jobs:
             codestra/scripts/validate_runtime_images.py \
             codestra/scripts/validate_staging_runtime_compose.py \
             codestra/scripts/deploy_staging_runtime.py \
-            scripts/validate_source_authority.py
+            scripts/validate_source_authority.py \
+            codestra/scripts/probe_observability_integrations.py
           python scripts/validate_source_authority.py
           python codestra/scripts/validate.py
           python codestra/scripts/validate_runtime_images.py
           python codestra/scripts/validate_staging_runtime_compose.py
+          python -m unittest discover -s codestra/tests -p 'test_observability_integration_probe.py'
 
       - name: Render dedicated staging runtime authority
         env:

@@ -20,11 +20,21 @@ REPOSITORY_RE = re.compile(
 DIGEST_RE = re.compile(r"^[0-9a-f]{64}$")
 IMAGE_INPUTS = {
     "prometheus": ("PROMETHEUS_IMAGE_REPOSITORY", "PROMETHEUS_IMAGE_DIGEST"),
+    "postgres-exporter": (
+        "POSTGRES_EXPORTER_IMAGE_REPOSITORY",
+        "POSTGRES_EXPORTER_IMAGE_DIGEST",
+    ),
 }
 EXPECTED_COMPOSE_IMAGES = {
     "prometheus": (
-        "image: docker.io/prom/prometheus@sha256:"
-        "63805ebb8d2b3920190daf1cb14a60871b16fd38bed42b857a3182bc621f4996"
+        "image: ${PROMETHEUS_IMAGE_REPOSITORY:?PROMETHEUS_IMAGE_REPOSITORY is required}"
+        "@sha256:${PROMETHEUS_IMAGE_DIGEST:?PROMETHEUS_IMAGE_DIGEST must be a "
+        "64-character lowercase hexadecimal digest}"
+    ),
+    "postgres-exporter": (
+        "image: ${POSTGRES_EXPORTER_IMAGE_REPOSITORY:?POSTGRES_EXPORTER_IMAGE_REPOSITORY "
+        "is required}@sha256:${POSTGRES_EXPORTER_IMAGE_DIGEST:?POSTGRES_EXPORTER_IMAGE_DIGEST "
+        "must be a 64-character lowercase hexadecimal digest}"
     ),
 }
 
@@ -67,6 +77,7 @@ def validate_compose_template() -> None:
             )
     for forbidden in (
         "${PROMETHEUS_IMAGE:",
+        "${POSTGRES_EXPORTER_IMAGE:",
         ":latest",
     ):
         if forbidden in text:
@@ -96,6 +107,8 @@ def prove_policy() -> None:
     valid = {
         "PROMETHEUS_IMAGE_REPOSITORY": "prom/prometheus",
         "PROMETHEUS_IMAGE_DIGEST": "0" * 64,
+        "POSTGRES_EXPORTER_IMAGE_REPOSITORY": "prometheuscommunity/postgres-exporter",
+        "POSTGRES_EXPORTER_IMAGE_DIGEST": "1" * 64,
     }
     validate_inputs(valid)
     unsafe = (
@@ -103,6 +116,7 @@ def prove_policy() -> None:
         {**valid, "PROMETHEUS_IMAGE_REPOSITORY": "prom/prometheus@sha256:" + "0" * 64},
         {**valid, "PROMETHEUS_IMAGE_DIGEST": "latest"},
         {**valid, "PROMETHEUS_IMAGE_DIGEST": "A" * 64},
+        {**valid, "POSTGRES_EXPORTER_IMAGE_DIGEST": "1" * 63},
     )
     for sample in unsafe:
         try:

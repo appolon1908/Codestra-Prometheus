@@ -1,7 +1,7 @@
 {
   "schema_version": "1.1",
   "component": "prometheus",
-  "codestra_repository": "appolon1908-hue/Codestra-Prometheus",
+  "codestra_repository": "ingtrader21-spec/Codestra-Prometheus",
   "upstream_repository": "prometheus/prometheus",
   "upstream_clone_url": "https://github.com/prometheus/prometheus.git",
   "trusted_upstream_ref": "refs/heads/main",

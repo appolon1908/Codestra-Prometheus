@@ -69,16 +69,16 @@ def main() -> None:
     ]
     catalog = yaml.safe_load(SERVICE_CATALOG.read_text(encoding="utf-8"))
     assert catalog["authorities"]["alert_routing"] == (
-        "appolon1908-hue/Codestra-Alertmanager"
+        "ingtrader21-spec/Codestra-Alertmanager"
     )
     approved_alertmanagers = [
         item
         for item in catalog["infrastructure_services"]
-        if item["repo"] == "appolon1908-hue/Codestra-Alertmanager"
+        if item["repo"] == "ingtrader21-spec/Codestra-Alertmanager"
     ]
     assert approved_alertmanagers == [
         {
-            "repo": "appolon1908-hue/Codestra-Alertmanager",
+            "repo": "ingtrader21-spec/Codestra-Alertmanager",
             "codestra_business": "platform",
             "application": "observability",
             "service": "alertmanager",

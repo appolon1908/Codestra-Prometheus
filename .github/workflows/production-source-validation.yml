@@ -1,0 +1,107 @@
+name: Prometheus production source validation
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: prometheus-production-source-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  EXPECTED_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+  PROMETHEUS_IMAGE_REPOSITORY: prom/prometheus
+  PROMETHEUS_IMAGE_DIGEST: '0000000000000000000000000000000000000000000000000000000000000000'
+  POSTGRES_EXPORTER_IMAGE_REPOSITORY: prometheuscommunity/postgres-exporter
+  POSTGRES_EXPORTER_IMAGE_DIGEST: '1111111111111111111111111111111111111111111111111111111111111111'
+  PROMETHEUS_RETENTION_TIME: 30d
+  PROMETHEUS_RETENTION_SIZE: 40GB
+  PROMETHEUS_LISTEN_ADDRESS: 127.0.0.1:9090
+  CODESTRA_OBSERVABILITY_NETWORK: codestra-observability
+  CODESTRA_DATABASE_NETWORK: codestra-database
+  POSTGRES_EXPORTER_URI_SECRET: codestra-postgres-exporter-uri
+  POSTGRES_EXPORTER_USER_SECRET: codestra-postgres-exporter-user
+  POSTGRES_EXPORTER_PASSWORD_SECRET: codestra-postgres-exporter-password
+
+jobs:
+  production-source-validation:
+    name: production-source-validation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - name: Check out exact source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.EXPECTED_SOURCE_SHA }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Verify exact source identity
+        run: |
+          set -Eeuo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SOURCE_SHA"
+          test -z "$(git status --porcelain)"
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.13'
+
+      - name: Install locked validator dependency
+        run: python -m pip install --disable-pip-version-check --no-cache-dir PyYAML==6.0.3
+
+      - name: Validate portfolio and immutable runtime inputs
+        env:
+          PYTHONPYCACHEPREFIX: /tmp/codestra-prometheus-pycache
+        run: |
+          set -Eeuo pipefail
+          python -m py_compile \
+            codestra/scripts/validate.py \
+            codestra/scripts/validate_runtime_images.py
+          python codestra/scripts/validate.py
+          python codestra/scripts/validate_runtime_images.py
+
+      - name: Render the hardened configuration
+        run: |
+          set -Eeuo pipefail
+          docker compose -f codestra/compose.yaml config > /tmp/codestra-prometheus-compose.yaml
+          test -s /tmp/codestra-prometheus-compose.yaml
+          grep -Eq 'image:[[:space:]]+prom/prometheus@sha256:[0-9a-f]{64}' /tmp/codestra-prometheus-compose.yaml
+          grep -Eq 'image:[[:space:]]+prometheuscommunity/postgres-exporter@sha256:[0-9a-f]{64}' /tmp/codestra-prometheus-compose.yaml
+          grep -Eq 'host_ip:[[:space:]]*127\.0\.0\.1' /tmp/codestra-prometheus-compose.yaml
+          ! grep -Eq ':latest([[:space:]]|$)|host_ip:[[:space:]]*(0\.0\.0\.0|::)' /tmp/codestra-prometheus-compose.yaml
+
+      - name: Set up Go from the locked upstream source
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version-file: upstream/go.mod
+          cache-dependency-path: upstream/go.sum
+
+      - name: Build exact-source promtool
+        working-directory: upstream
+        run: |
+          set -Eeuo pipefail
+          mkdir -p ../.bin
+          go build -trimpath -o ../.bin/promtool ./cmd/promtool
+
+      - name: Validate all Codestra Prometheus configuration and rules
+        run: |
+          set -Eeuo pipefail
+          .bin/promtool check config codestra/prometheus/prometheus.yml
+          .bin/promtool check rules codestra/prometheus/rules/*.yml
+          .bin/promtool check rules codestra/runtime-v1/codestra-corporate-recording-rules.yml
+          .bin/promtool check rules codestra/runtime-v1/codestra-corporate-alerts.yml
+          test "$(python -c 'import json; print(json.load(open("codestra/enterprise-profile.v1.json"))["status"])')" = "CONFIG_PREPARED_NOT_DEPLOYED"
+          git diff --check
+
+      - name: Confirm no runtime activation
+        run: |
+          echo 'PROMETHEUS_SOURCE_VALIDATION=PASS'
+          echo 'SCRAPE_TARGETS_CHANGED=NO'
+          echo 'RUNTIME_DEPLOYED=NO'
+          echo 'PRODUCTION_ACTIVATED=NO'

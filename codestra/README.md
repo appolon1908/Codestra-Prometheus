@@ -58,3 +58,19 @@ cd upstream && go build -o ../.bin/promtool ./cmd/promtool
 ```
 
 Deploy exporters first, then built-in service metrics, then application instrumentation. Verify all required targets, send a synthetic Alertmanager alert, remove it, and complete a 24-hour staging soak before production promotion. Never delete backlog rows or enable live delivery to clear an alert.
+
+## Governed observability API integration
+
+The machine-readable contract at `catalog/observability-api-contract.v1.yml` defines the private Prometheus, Alertmanager, OpenTelemetry, Loki, Tempo, Grafana, Alloy, and exporter endpoints. Metrics use pull semantics: Prometheus scrapes the OpenTelemetry Collector's HTTPS metrics endpoint. Logs and traces continue through OTLP. All governed native endpoints require service identity and mTLS.
+
+Run the read-only integration probe only from the private observability network with externally supplied certificates:
+
+```bash
+python codestra/scripts/probe_observability_integrations.py \
+  --ca-file /run/secrets/observability/ca.crt \
+  --cert-file /run/secrets/observability/prometheus.crt \
+  --key-file /run/secrets/observability/prometheus.key \
+  --output /tmp/observability-integration-evidence.json
+```
+
+The probe permits only GET/HEAD checks, never records URLs or certificate material in evidence, writes evidence mode `0600`, and exits nonzero if any governed check fails. It does not activate pending targets, deliver alerts, query customer data, or perform business writes.

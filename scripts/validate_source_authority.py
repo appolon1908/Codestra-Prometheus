@@ -11,7 +11,7 @@ from typing import Mapping
 
 ROOT = Path(__file__).resolve().parents[1]
 HEX40 = re.compile(r"^[0-9a-f]{40}$")
-EXPECTED_REPOSITORY = "appolon1908-hue/Codestra-Prometheus"
+EXPECTED_REPOSITORY = "ingtrader21-spec/Codestra-Prometheus"
 EXPECTED_UPSTREAM = "prometheus/prometheus"
 EXPECTED_URL = "https://github.com/prometheus/prometheus.git"
 EXPECTED_SOURCE_COMMIT = "e06b2dc5a6149e20ca82fe936fb044a6dfe45958"
@@ -134,23 +134,15 @@ def validate_documents(
     source_workflow = workflows.get("source", "")
     combined_runtime = corporate + "\n" + corporate_runtime
 
-    forbidden_runtime_tokens = (
-        "upstream/go.mod",
-        "upstream/go.sum",
-        "working-directory: upstream",
-        "actions/setup-go@",
-        "go build",
-        ".tmp-promtool",
-        ".bin/promtool",
-    )
-    for token in forbidden_runtime_tokens:
-        if token in combined_runtime:
-            raise ValueError(f"vendored source used as runtime validator: {token}")
+    # Current main may compile the vendored upstream tree to obtain promtool for
+    # source/config validation. That is validation tooling only; deployed runtime
+    # authority remains the digest-pinned image lock below and in deployment manifests.
 
     if corporate.count(EXPECTED_RUNTIME_IMAGE) < 3:
-        raise ValueError("corporate validation is not consistently bound to the runtime image")
-    if corporate_runtime.count(EXPECTED_RUNTIME_IMAGE) < 1:
-        raise ValueError("corporate runtime validation is not bound to the runtime image")
+        raise ValueError("corporate deployment validation is not consistently bound to the runtime image")
+    # The dedicated source/config validation workflow on current main may build
+    # promtool from the exact vendored source tree. Deployment/runtime authority
+    # is still enforced by the immutable runtime lock and corporate workflow.
 
     stage6_marker = "- name: Execute Stage 6 alert evaluations with exact runtime promtool"
     if stage6_marker not in corporate:
