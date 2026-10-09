@@ -12,7 +12,7 @@ groups:
         annotations:
           summary: "Codestra observability watchdog"
           description: "Continuously firing heartbeat proving Prometheus rule evaluation and the Alertmanager-to-Middleware incident path. It must not trigger user-facing communications."
-          runbook_url: "https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#notification-failures"
+          runbook_url: "https://github.com/ingtrader21-spec/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#notification-failures"
 
       - alert: CodestraExporterDown
         expr: up{job="codestra-targets",job_class=~"host|container|database|observability|observability-agent|security"} == 0
@@ -26,7 +26,7 @@ groups:
         annotations:
           summary: "{{ $labels.service }} is down on {{ $labels.server }}"
           description: "Prometheus has failed to scrape the target for two minutes."
-          runbook_url: "https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#rule-evaluation-failures"
+          runbook_url: "https://github.com/ingtrader21-spec/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#rule-evaluation-failures"
 
       - alert: CodestraPrometheusRuleEvaluationFailures
         expr: increase(prometheus_rule_evaluation_failures_total[10m]) > 0
@@ -40,7 +40,7 @@ groups:
         annotations:
           summary: "Prometheus rule evaluation failures"
           description: "At least one rule evaluation failed during the last ten minutes."
-          runbook_url: "https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#rule-evaluation-failures"
+          runbook_url: "https://github.com/ingtrader21-spec/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#rule-evaluation-failures"
 
       - alert: CodestraPrometheusConfigReloadFailure
         expr: prometheus_config_last_reload_successful == 0
@@ -54,7 +54,7 @@ groups:
         annotations:
           summary: "Prometheus configuration reload failed"
           description: "The active Prometheus configuration could not be reloaded."
-          runbook_url: "https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#rule-evaluation-failures"
+          runbook_url: "https://github.com/ingtrader21-spec/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#rule-evaluation-failures"
 
   - name: codestra-host-health
     rules:
@@ -70,7 +70,7 @@ groups:
         annotations:
           summary: "CPU high on {{ $labels.server }}"
           description: "CPU utilization has exceeded 90% for fifteen minutes."
-          runbook_url: "https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#head-series-capacity"
+          runbook_url: "https://github.com/ingtrader21-spec/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#head-series-capacity"
 
       - alert: CodestraNodeMemoryHigh
         expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 90
@@ -84,7 +84,7 @@ groups:
         annotations:
           summary: "Memory high on {{ $labels.server }}"
           description: "Memory utilization has exceeded 90% for ten minutes."
-          runbook_url: "https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#head-series-capacity"
+          runbook_url: "https://github.com/ingtrader21-spec/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#head-series-capacity"
 
       - alert: CodestraNodeDiskLow
         expr: (node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs"} / node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs"}) < 0.15
@@ -98,7 +98,7 @@ groups:
         annotations:
           summary: "Disk space low on {{ $labels.server }}"
           description: "Filesystem {{ $labels.mountpoint }} has less than 15% free space."
-          runbook_url: "https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#head-series-capacity"
+          runbook_url: "https://github.com/ingtrader21-spec/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#head-series-capacity"
 
       - alert: CodestraContainerMemoryHigh
         expr: (container_memory_working_set_bytes{name!="",container_label_com_docker_compose_service!=""} / container_spec_memory_limit_bytes{name!="",container_label_com_docker_compose_service!=""}) > 0.90 and container_spec_memory_limit_bytes > 0
@@ -112,7 +112,7 @@ groups:
         annotations:
           summary: "Container memory high on {{ $labels.server }}"
           description: "Container {{ $labels.name }} is using more than 90% of its configured limit."
-          runbook_url: "https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#head-series-capacity"
+          runbook_url: "https://github.com/ingtrader21-spec/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#head-series-capacity"
 
   - name: codestra-database-health
     rules:
@@ -128,7 +128,7 @@ groups:
         annotations:
           summary: "PostgreSQL is unavailable"
           description: "PostgreSQL exporter cannot reach its configured database."
-          runbook_url: "https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#rule-evaluation-failures"
+          runbook_url: "https://github.com/ingtrader21-spec/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#rule-evaluation-failures"
 
       - alert: CodestraPostgresConnectionsHigh
         expr: sum by (codestra_business, environment, region, server, instance) (pg_stat_activity_count) / clamp_min(max by (codestra_business, environment, region, server, instance) (pg_settings_max_connections), 1) > 0.85
@@ -142,7 +142,7 @@ groups:
         annotations:
           summary: "PostgreSQL connection usage high"
           description: "Connection usage has exceeded 85%."
-          runbook_url: "https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#head-series-capacity"
+          runbook_url: "https://github.com/ingtrader21-spec/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#head-series-capacity"
 
       - alert: CodestraRedisDown
         expr: redis_up == 0
@@ -156,7 +156,7 @@ groups:
         annotations:
           summary: "Redis is unavailable"
           description: "Redis exporter cannot reach its configured Redis instance."
-          runbook_url: "https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#rule-evaluation-failures"
+          runbook_url: "https://github.com/ingtrader21-spec/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#rule-evaluation-failures"
 
       - alert: CodestraRedisMemoryHigh
         expr: redis_memory_used_bytes / clamp_min(redis_memory_max_bytes, 1) > 0.90 and redis_memory_max_bytes > 0
@@ -170,7 +170,7 @@ groups:
         annotations:
           summary: "Redis memory usage high"
           description: "Redis is using more than 90% of maxmemory."
-          runbook_url: "https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#head-series-capacity"
+          runbook_url: "https://github.com/ingtrader21-spec/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#head-series-capacity"
 
   - name: codestra-blackbox-health
     rules:
@@ -186,7 +186,7 @@ groups:
         annotations:
           summary: "Public probe failed for {{ $labels.service }}"
           description: "Blackbox probe to {{ $labels.instance }} has failed for five minutes."
-          runbook_url: "https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#notification-failures"
+          runbook_url: "https://github.com/ingtrader21-spec/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#notification-failures"
 
       - alert: CodestraTlsCertificateExpiringSoon
         expr: (probe_ssl_earliest_cert_expiry{job="blackbox",probe_enabled="true"} - time()) < 1209600
@@ -200,4 +200,4 @@ groups:
         annotations:
           summary: "TLS certificate expires within 14 days"
           description: "Certificate for {{ $labels.instance }} is nearing expiration."
-          runbook_url: "https://github.com/appolon1908-hue/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#notification-failures"
+          runbook_url: "https://github.com/ingtrader21-spec/Codestra-Prometheus/blob/main/codestra/docs/RUNBOOKS.md#notification-failures"

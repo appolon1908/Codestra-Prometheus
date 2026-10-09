@@ -1,13 +1,13 @@
 {
   "schema_version": "1.1",
   "suite_id": "codestra-controlled-intake-monitoring-v1",
-  "repository": "appolon1908-hue/Codestra-Prometheus",
+  "repository": "ingtrader21-spec/Codestra-Prometheus",
   "component": "prometheus",
   "execution_question": "Why is this integration being executed?",
   "execution_reason_required": true,
   "source_only_preparation": true,
   "middleware_source_authority": {
-    "repository": "appolon1908-hue/Middleware-",
+    "repository": "ingtrader21-spec/Middleware-",
     "source_sha": "f6748a58f8d2590520a4f28776770957061cdea1",
     "source_state": "MERGED_REVIEWED_EXACT_SHA",
     "immutable_image_reference": "ghcr.io/appolon1908-hue/codestra-middleware@sha256:695fa3ce3f50ba4d0ae0784976b946a0a683ca731155e4bd3bd9e90a4670b820",
@@ -16,7 +16,7 @@
     "release_id": "f6748a58f8d2-695fa3ce3f50",
     "release_run_id": 33314094004,
     "release_run_attempt": 1,
-    "release_run_url": "https://github.com/appolon1908-hue/Middleware-/actions/runs/33314094004",
+    "release_run_url": "https://github.com/ingtrader21-spec/Middleware-/actions/runs/33314094004",
     "release_artifact_name": "signed-middleware-release-f6748a58f8d2590520a4f28776770957061cdea1-33314094004-1",
     "release_built_at": "2026-08-30T13:24:37Z",
     "release_workflow_path": ".github/workflows/release.yml",
@@ -49,7 +49,7 @@
     "issuer_boundary": "Keycloak service identity with OpenBao-managed runtime material"
   },
   "staging_evidence": {
-    "collector_repository": "appolon1908-hue/Codestra-Prometheus",
+    "collector_repository": "ingtrader21-spec/Codestra-Prometheus",
     "collector_branch": "development",
     "checksum": null,
     "state": "PENDING_RUNTIME_EXECUTION",

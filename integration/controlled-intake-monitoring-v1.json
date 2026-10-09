@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "suite_id": "codestra-controlled-intake-monitoring-v1",
-  "repository": "appolon1908-hue/Codestra-Prometheus",
+  "repository": "ingtrader21-spec/Codestra-Prometheus",
   "component": "prometheus",
   "role": "authoritative_metrics_collection_recording_and_alert_evaluation",
   "baseline_ref": "development",
@@ -17,7 +17,7 @@
   "prometheus_target_state": "pending",
   "blackbox_probe_state": "pending",
   "middleware_metrics_endpoint": {
-    "repository": "appolon1908-hue/Middleware-",
+    "repository": "ingtrader21-spec/Middleware-",
     "method": "GET",
     "path": "/metrics",
     "client_id": "monitoring-readonly",

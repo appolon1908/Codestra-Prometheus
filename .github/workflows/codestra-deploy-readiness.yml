@@ -22,12 +22,13 @@ on:
         default: "1"
 
 permissions:
+  actions: read
   contents: write
   id-token: write
 
 jobs:
   deploy-readiness:
-    uses: appolon1908-hue/Infustruction-repo/.github/workflows/reusable-codestra-upstream-deploy-readiness.yml@f509d61a6207c7cd9e5f2562de0c2b32a85b6cca
+    uses: ingtrader21-spec/Infustruction-repo/.github/workflows/reusable-codestra-upstream-deploy-readiness.yml@92f731039333846ef067f1ddbcb276463a92d9ba
     with:
       repository_class: observability-overlay
       runtime_deployable: true
