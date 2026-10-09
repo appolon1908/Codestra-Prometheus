@@ -91,7 +91,7 @@ infrastructure_services:
   - {repo: ingtrader21-spec/Codestra-Tempo, codestra_business: platform, application: observability, service: tempo, endpoint: "tempo:3200", path: /metrics, activation: pending}
   - {repo: ingtrader21-spec/Codestra-Grafana-, codestra_business: platform, application: observability, service: grafana, endpoint: "grafana:3000", path: /metrics, activation: pending}
   - {repo: ingtrader21-spec/Codestra-Alloy, codestra_business: platform, application: observability, service: alloy, endpoint: "alloy:12345", path: /metrics, activation: pending}
-  - {repo: ingtrader21-spec/Codestra-OpenBao, codestra_business: platform, application: security, service: openbao, endpoint: "openbao:8200", path: /v1/sys/metrics, activation: pending}
+  - {repo: ingtrader21-spec/Codestra-OpenBao, codestra_business: platform, application: security, service: openbao, endpoint: "codestra-bao-production-01:8200", path: /v1/sys/metrics, activation: pending, scrape_job: codestra-openbao, auth: openbao-short-lived-token-file-and-mtls}
   - {repo: ingtrader21-spec/Codestra-Node-Exporter, codestra_business: platform, application: infrastructure, service: node-exporter, endpoint: "private-host:9100", path: /metrics, activation: active}
   - {repo: ingtrader21-spec/Codestra-cAdvisor, codestra_business: platform, application: infrastructure, service: cadvisor, endpoint: "private-host:8080", path: /metrics, activation: active}
   - {repo: ingtrader21-spec/Codestra-Postgres-Exporter, codestra_business: platform, application: databases, service: postgres-exporter, endpoint: "postgres-exporter:9187", path: /metrics, activation: active}
@@ -99,7 +99,7 @@ infrastructure_services:
   - {repo: ingtrader21-spec/Codestra-Blackbox-Exporter, codestra_business: platform, application: observability, service: blackbox-exporter, endpoint: "blackbox-exporter:9115", path: /probe, activation: active}
   - {repo: ingtrader21-spec/Caddy, codestra_business: platform, application: edge, service: caddy, endpoint: "caddy:2020", path: /metrics, activation: active}
   - {repo: ingtrader21-spec/Kong, codestra_business: platform, application: gateway, service: kong, endpoint: "kong:8100", path: /metrics, activation: active}
-  - {repo: ingtrader21-spec/Middleware-, codestra_business: platform, application: integration, service: middleware, endpoint: "middleware-control-plane:8096", path: /metrics, activation: active}
+  - {repo: ingtrader21-spec/Middleware-, codestra_business: platform, application: integration, service: middleware, endpoint: "middleware-integration-api:8095", path: /metrics, activation: active, scrape_job: codestra-middleware-metrics, auth: keycloak-monitoring-readonly-metrics.read}
   - {repo: ingtrader21-spec/Keycloak, codestra_business: platform, application: identity, service: keycloak, endpoint: "keycloak:9000", path: /metrics, activation: active}
   - {repo: ingtrader21-spec/N8N, codestra_business: platform, application: automation, service: n8n, endpoint: "n8n-main:5678", path: /metrics, activation: active}
   - {repo: ingtrader21-spec/Odoo, codestra_business: platform, application: erp, service: odoo, endpoint: "odoo:8069", path: /codestra/metrics, activation: active}

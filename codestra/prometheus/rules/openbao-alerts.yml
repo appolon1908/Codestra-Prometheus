@@ -1,0 +1,142 @@
+groups:
+  - name: codestra-openbao
+    rules:
+      - alert: OpenBaoMetricsUnavailable
+        expr: up{job="codestra-openbao"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          owner: codestra-security
+          codestra_business: platform
+          service: openbao
+          environment: "{{ $labels.environment }}"
+        annotations:
+          summary: "OpenBao private metrics are unavailable"
+          description: "The authenticated /v1/sys/metrics scrape has failed for two minutes. Check the short-lived prometheus-openbao token file, the mTLS material and the private observability listener."
+          runbook_url: "https://github.com/appolon1908-hue/Codestra-OpenBao/blob/development/docs/MONITORING-OPENBAO-INTEGRATION.md#openbao-health"
+
+      - alert: OpenBaoSealed
+        expr: vault_core_unsealed{job="codestra-openbao"} != 1
+        for: 1m
+        labels:
+          severity: critical
+          owner: codestra-security
+          codestra_business: platform
+          service: openbao
+          environment: "{{ $labels.environment }}"
+        annotations:
+          summary: "OpenBao is sealed"
+          description: "OpenBao reports a sealed barrier. Unseal is an operator-controlled custody procedure; no automation unseals on this alert."
+          runbook_url: "https://github.com/appolon1908-hue/Codestra-OpenBao/blob/development/docs/recovery/OPENBAO-DISASTER-RECOVERY.md"
+
+      - alert: OpenBaoNoActiveLeader
+        expr: max(vault_core_active{job="codestra-openbao"}) != 1
+        for: 2m
+        labels:
+          severity: critical
+          owner: codestra-security
+          codestra_business: platform
+          service: openbao
+          environment: production
+        annotations:
+          summary: "No active OpenBao leader is reporting"
+          description: "Every scraped node reports standby or nothing; workloads cannot obtain or renew credentials."
+          runbook_url: "https://github.com/appolon1908-hue/Codestra-OpenBao/blob/development/docs/operations/OPENBAO-OPERATIONS.md"
+
+      - alert: OpenBaoHealthProbeFailure
+        expr: probe_success{job="blackbox",service="openbao-health"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          owner: codestra-security
+          codestra_business: platform
+          service: openbao
+          environment: "{{ $labels.environment }}"
+        annotations:
+          summary: "GET /v1/sys/health reports OpenBao unavailable, sealed or uninitialised"
+          description: "The safe health probe accepts only active (200) and standby (429) with initialized=true and sealed=false. The probe never unseals or initialises."
+          runbook_url: "https://github.com/appolon1908-hue/Codestra-OpenBao/blob/development/docs/MONITORING-OPENBAO-INTEGRATION.md#openbao-health"
+
+      - alert: OpenBaoHealthProbeLatencyHigh
+        expr: probe_duration_seconds{job="blackbox",service="openbao-health"} > 2
+        for: 5m
+        labels:
+          severity: warning
+          owner: codestra-security
+          codestra_business: platform
+          service: openbao
+          environment: "{{ $labels.environment }}"
+        annotations:
+          summary: "OpenBao health endpoint latency exceeds two seconds"
+          description: "Credential retrieval and renewal will slow for every workload."
+          runbook_url: "https://github.com/appolon1908-hue/Codestra-OpenBao/blob/development/docs/operations/OPENBAO-OPERATIONS.md"
+
+      - alert: OpenBaoAuditDeviceFailure
+        expr: increase(vault_audit_log_request_failure{job="codestra-openbao"}[5m]) > 0 or increase(vault_audit_log_response_failure{job="codestra-openbao"}[5m]) > 0
+        for: 0m
+        labels:
+          severity: critical
+          owner: codestra-security
+          codestra_business: platform
+          service: openbao
+          environment: "{{ $labels.environment }}"
+        annotations:
+          summary: "OpenBao audit device failed to record a request or response"
+          description: "OpenBao fails closed when audit delivery fails; secret access is blocked until the audit device recovers."
+          runbook_url: "https://github.com/appolon1908-hue/Codestra-OpenBao/blob/development/docs/MONITORING-OPENBAO-INTEGRATION.md#audit-pipeline"
+
+      - alert: OpenBaoAuditDeviceSilent
+        expr: (increase(vault_audit_log_request_count{job="codestra-openbao"}[15m]) == 0) and on() vault_core_unsealed{job="codestra-openbao"} == 1
+        for: 15m
+        labels:
+          severity: critical
+          owner: codestra-security
+          codestra_business: platform
+          service: openbao
+          environment: "{{ $labels.environment }}"
+        annotations:
+          summary: "The OpenBao audit device recorded nothing for fifteen minutes while unsealed"
+          description: "Either no workload is authenticating or the audit device is unavailable; correlate with the audit stream in Loki."
+          runbook_url: "https://github.com/appolon1908-hue/Codestra-OpenBao/blob/development/docs/MONITORING-OPENBAO-INTEGRATION.md#audit-pipeline"
+
+      - alert: OpenBaoAuthFailureSurge
+        expr: sum by (environment) (rate(vault_core_handle_login_request_count{job="codestra-openbao",quantile="0.5"}[5m])) > 10
+        for: 5m
+        labels:
+          severity: warning
+          owner: codestra-security
+          codestra_business: platform
+          service: openbao
+          environment: "{{ $labels.environment }}"
+        annotations:
+          summary: "OpenBao authentication traffic surge requires audit-log correlation"
+          description: "Sustained login volume; check the Loki audit stream for repeated rejected Keycloak workload JWTs."
+          runbook_url: "https://github.com/appolon1908-hue/Codestra-OpenBao/blob/development/docs/security/OPENBAO-SECURITY-MODEL.md"
+
+      - alert: OpenBaoLeaseExpirationSurge
+        expr: sum by (environment) (rate(vault_expire_num_leases{job="codestra-openbao"}[10m])) < 0 and on(environment) sum by (environment) (increase(vault_expire_revoke_count{job="codestra-openbao"}[10m])) > 100
+        for: 10m
+        labels:
+          severity: warning
+          owner: codestra-security
+          codestra_business: platform
+          service: openbao
+          environment: "{{ $labels.environment }}"
+        annotations:
+          summary: "Unusual OpenBao lease revocation volume"
+          description: "More than one hundred leases revoked in ten minutes; verify rotation or revocation runs are expected."
+          runbook_url: "https://github.com/appolon1908-hue/Codestra-OpenBao/blob/development/docs/operations/OPENBAO-ROTATION.md"
+
+      - alert: OpenBaoScrapeCredentialNearExpiry
+        expr: (codestra_openbao_prometheus_token_expires_at_seconds - time()) < 120
+        for: 1m
+        labels:
+          severity: warning
+          owner: codestra-observability
+          codestra_business: platform
+          service: openbao
+          environment: "{{ $labels.environment }}"
+        annotations:
+          summary: "The prometheus-openbao short-lived token expires in under two minutes"
+          description: "The agent-rendered token file must be renewed before expiry; otherwise OpenBao metrics become unavailable."
+          runbook_url: "https://github.com/appolon1908-hue/Codestra-OpenBao/blob/development/docs/MONITORING-OPENBAO-INTEGRATION.md#openbao--prometheus"

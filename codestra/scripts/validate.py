@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import re
 import sys
@@ -59,6 +60,8 @@ EXPECTED_JOBS = {
     "codestra-targets",
     "otel-application-metrics",
     "blackbox",
+    "codestra-middleware-metrics",
+    "codestra-openbao",
 }
 FORBIDDEN = re.compile(
     r"(?i)^(tenant_id|tenant_name|organization_id|organization_name|"
@@ -241,11 +244,132 @@ def validate_target_groups(
     return services, businesses
 
 
+# Jobs that authenticate to their target and therefore carry their own static
+# targets instead of the unauthenticated file_sd catalogue.
+DEDICATED_JOBS = {
+    "codestra-middleware-metrics": "middleware",
+    "codestra-openbao": "openbao",
+}
+INLINE_CREDENTIAL_KEYS = {"bearer_token", "password", "client_secret", "credentials"}
+SAFE_PROBE_MODULES = {
+    "https_2xx", "http_2xx_internal", "tcp_connect", "https_openbao_health",
+    "dns_a_record", "tls_expiry",
+}
+
+
+def dedicated_job_services(config: dict[str, Any]) -> set[str]:
+    services: set[str] = set()
+    jobs = {job.get("job_name"): job for job in config.get("scrape_configs", [])}
+    for job_name, service in DEDICATED_JOBS.items():
+        job = jobs.get(job_name)
+        if job is None:
+            fail(f"dedicated scrape job {job_name} is missing")
+        for group in job.get("static_configs", []):
+            labels = group.get("labels", {})
+            missing = REQUIRED_TARGET_LABELS - labels.keys()
+            if missing:
+                fail(f"{job_name} static target missing labels {sorted(missing)}")
+            if labels.get("service") != service:
+                fail(f"{job_name} must scrape service {service}")
+            if labels.get("activation") not in ALLOWED_ACTIVATION:
+                fail(f"{job_name} static target has invalid activation")
+            services.add(labels["service"])
+    return services
+
+
+def validate_no_inline_credentials(config: dict[str, Any]) -> None:
+    def walk(value: Any, trail: str) -> None:
+        if isinstance(value, dict):
+            for key, item in value.items():
+                if key in INLINE_CREDENTIAL_KEYS and isinstance(item, str) and item:
+                    fail(f"inline credential in prometheus.yml at {trail}.{key}; use a *_file rendered from OpenBao")
+                walk(item, f"{trail}.{key}")
+        elif isinstance(value, list):
+            for index, item in enumerate(value):
+                walk(item, f"{trail}[{index}]")
+
+    walk(config, "prometheus")
+
+
+def validate_dedicated_jobs(jobs: dict[str, Any]) -> None:
+    middleware = jobs["codestra-middleware-metrics"]
+    oauth = middleware.get("oauth2", {})
+    if oauth.get("client_id") != "monitoring-readonly":
+        fail("Middleware metrics scrape must authenticate as monitoring-readonly")
+    if not str(oauth.get("client_secret_file", "")).startswith("/run/secrets/"):
+        fail("monitoring-readonly client secret must be an OpenBao-rendered file under /run/secrets")
+    if "client_secret" in oauth:
+        fail("monitoring-readonly client secret must never be inline")
+    if oauth.get("scopes") != ["metrics.read"]:
+        fail("Middleware metrics scrape must request exactly the metrics.read scope")
+    if not str(oauth.get("token_url", "")).startswith("https://auth.codestra.co/realms/codestra/"):
+        fail("Middleware metrics scrape must use the canonical Keycloak token endpoint over HTTPS")
+    if middleware.get("metrics_path", "/metrics") != "/metrics":
+        fail("Middleware metrics path drifted")
+    targets = [t for group in middleware.get("static_configs", []) for t in group.get("targets", [])]
+    if targets != ["middleware-integration-api:8095"]:
+        fail("Middleware metrics scrape must target the canonical private runtime middleware-integration-api:8095")
+    if not any(rule.get("action") == "labeldrop" for rule in middleware.get("metric_relabel_configs", [])):
+        fail("Middleware metrics scrape requires defense-in-depth label stripping")
+
+    openbao = jobs["codestra-openbao"]
+    if openbao.get("scheme") != "https" or openbao.get("metrics_path") != "/v1/sys/metrics":
+        fail("OpenBao scrape must use https and /v1/sys/metrics")
+    if openbao.get("params", {}).get("format") != ["prometheus"]:
+        fail("OpenBao scrape must request format=prometheus")
+    authorization = openbao.get("authorization", {})
+    if authorization.get("type") != "Bearer" or not str(authorization.get("credentials_file", "")).startswith("/run/secrets/"):
+        fail("OpenBao scrape must present a short-lived bearer from a file under /run/secrets")
+    tls = openbao.get("tls_config", {})
+    if tls.get("insecure_skip_verify") is not False or not tls.get("ca_file") or not tls.get("cert_file") or not tls.get("key_file"):
+        fail("OpenBao scrape must use verified mTLS material from files")
+    for group in openbao.get("static_configs", []):
+        if group.get("labels", {}).get("activation") != "pending":
+            fail("OpenBao scrape stays pending until the OpenBao runtime is certified")
+    if not any(rule.get("action") == "labeldrop" for rule in openbao.get("metric_relabel_configs", [])):
+        fail("OpenBao scrape requires label stripping of token, accessor, lease and path labels")
+
+
+def validate_blackbox_modules() -> None:
+    modules = load_yaml(ROOT / "blackbox" / "blackbox.yml").get("modules", {})
+    unsafe = {"POST", "PUT", "PATCH", "DELETE"}
+    for name, module in modules.items():
+        method = str(module.get("http", {}).get("method", "GET")).upper()
+        if method in unsafe:
+            fail(f"blackbox module {name} uses unsafe method {method}")
+        if module.get("http", {}).get("body"):
+            fail(f"blackbox module {name} must not send a body")
+    health = modules.get("https_openbao_health", {})
+    if health.get("http", {}).get("valid_status_codes") != [200, 429]:
+        fail("https_openbao_health must accept only active (200) and standby (429)")
+    if health.get("http", {}).get("tls_config", {}).get("insecure_skip_verify") is not False:
+        fail("https_openbao_health must verify TLS")
+    body_checks = health.get("http", {}).get("fail_if_body_not_matches_regexp", [])
+    if not any("initialized" in check for check in body_checks) or not any("sealed" in check for check in body_checks):
+        fail("https_openbao_health must require initialized=true and sealed=false in the body")
+    targets = json.loads((ROOT / "blackbox" / "targets-production.json").read_text(encoding="utf-8"))
+    for group in targets:
+        module = group.get("labels", {}).get("probe_module")
+        if module is not None and module not in SAFE_PROBE_MODULES:
+            fail(f"blackbox target {group['targets']} selects an unreviewed module {module}")
+        for target in group.get("targets", []):
+            if "/v1/sys/health" in target and module != "https_openbao_health":
+                fail("the OpenBao health target must use the https_openbao_health module")
+
+
 def validate_targets() -> None:
     services, businesses = validate_target_groups(
         ROOT / "prometheus" / "targets" / "production.json",
         REQUIRED_TARGET_LABELS,
     )
+    config = load_yaml(ROOT / "prometheus" / "prometheus.yml")
+    validate_no_inline_credentials(config)
+    services |= dedicated_job_services(config)
+    for service in DEDICATED_JOBS.values():
+        generic = [g["targets"] for g in json.loads((ROOT / "prometheus" / "targets" / "production.json").read_text(encoding="utf-8")) if g["labels"].get("service") == service]
+        if generic:
+            fail(f"{service} must be scraped only through its authenticated dedicated job, not the file_sd catalogue: {generic}")
+    validate_blackbox_modules()
     missing_services = REQUIRED_SERVICES - services
     if missing_services:
         fail(f"missing required services {sorted(missing_services)}")
@@ -283,6 +407,11 @@ def validate_scrape_config() -> None:
         missing = budgets - job.keys()
         if missing:
             fail(f"scrape job {job_name} is missing budgets {sorted(missing)}")
+
+    validate_dedicated_jobs(jobs)
+    blackbox_relabel = jobs["blackbox"].get("relabel_configs", [])
+    if not any(rule.get("target_label") == "__param_module" and rule.get("source_labels") == ["probe_module"] for rule in blackbox_relabel):
+        fail("blackbox job must map the reviewed probe_module label to the module parameter")
 
     self_configs = jobs["prometheus"].get("static_configs", [])
     if len(self_configs) != 1 or not CORPORATE_LABELS.issubset(
@@ -522,8 +651,31 @@ def validate_observability_api_contract() -> None:
         fail("observability required-flow set is incomplete")
 
 
+def validate_target_inventory() -> None:
+    """The committed per-target inventory must describe exactly this configuration."""
+    spec = importlib.util.spec_from_file_location(
+        "target_inventory", ROOT / "scripts" / "target_inventory.py"
+    )
+    module = importlib.util.module_from_spec(spec)
+    assert spec and spec.loader
+    spec.loader.exec_module(module)
+    inventory = module.build_inventory()
+    problems = module.check_invariants(inventory)
+    if problems:
+        fail("target inventory invariant: " + "; ".join(problems))
+    committed = json.loads(
+        (ROOT / "target-inventory.v1.json").read_text(encoding="utf-8")
+    )
+    if committed != inventory:
+        fail(
+            "codestra/target-inventory.v1.json is stale; "
+            "regenerate with target_inventory.py --write"
+        )
+
+
 def main() -> int:
     validate_profile()
+    validate_target_inventory()
     validate_catalog()
     validate_observability_api_contract()
     validate_targets()

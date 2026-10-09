@@ -89,6 +89,24 @@ jobs:
           mkdir -p ../.bin
           go build -trimpath -o ../.bin/promtool ./cmd/promtool
 
+      - name: Provide CI-only placeholder credential files for the full promtool check
+        # promtool check config (without --syntax-only) stats every credentials_file,
+        # client_secret_file, ca_file, cert_file and key_file referenced by the scrape
+        # configuration. Real material is rendered by the OpenBao agent at runtime only;
+        # these placeholders never leave the runner and cannot authenticate anywhere.
+        run: |
+          set -Eeuo pipefail
+          sudo install -d -m 0700 -o "$(id -u)" -g "$(id -g)" /run/secrets
+          for name in \
+            monitoring-readonly-client-secret \
+            openbao-prometheus-token \
+            codestra-openbao-ca \
+            openbao-prometheus-client-cert \
+            openbao-prometheus-client-key; do
+            printf '%s\n' 'ci-nondelivery-placeholder' > "/run/secrets/${name}"
+            chmod 0600 "/run/secrets/${name}"
+          done
+
       - name: Validate all Codestra Prometheus configuration and rules
         run: |
           set -Eeuo pipefail
