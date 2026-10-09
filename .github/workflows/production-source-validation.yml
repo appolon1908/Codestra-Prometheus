@@ -96,15 +96,15 @@ jobs:
         # these placeholders never leave the runner and cannot authenticate anywhere.
         run: |
           set -Eeuo pipefail
-          sudo install -d -m 0700 /run/secrets
+          sudo install -d -m 0700 -o "$(id -u)" -g "$(id -g)" /run/secrets
           for name in \
             monitoring-readonly-client-secret \
             openbao-prometheus-token \
             codestra-openbao-ca \
             openbao-prometheus-client-cert \
             openbao-prometheus-client-key; do
-            printf '%s\n' 'ci-nondelivery-placeholder' | sudo tee "/run/secrets/${name}" >/dev/null
-            sudo chmod 0600 "/run/secrets/${name}"
+            printf '%s\n' 'ci-nondelivery-placeholder' > "/run/secrets/${name}"
+            chmod 0600 "/run/secrets/${name}"
           done
 
       - name: Validate all Codestra Prometheus configuration and rules
