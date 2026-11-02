@@ -15,12 +15,12 @@
       "workflow": ".github/workflows/validate-codestra-corporate-runtime-v1.yml"
     },
     {
-      "context": "deploy-readiness / deploy-readiness / source-ci",
+      "context": "deploy-readiness / deploy-readiness / overlay-source-ci",
       "integration_id": 15368,
       "workflow": ".github/workflows/codestra-deploy-readiness.yml"
     },
     {
-      "context": "deploy-readiness / deploy-readiness / secret-scan",
+      "context": "deploy-readiness / deploy-readiness / overlay-secret-scan",
       "integration_id": 15368,
       "workflow": ".github/workflows/codestra-deploy-readiness.yml"
     }
