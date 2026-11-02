@@ -10,7 +10,7 @@
       "workflow": ".github/workflows/production-source-validation.yml"
     },
     {
-      "context": "validate",
+      "context": "codestra/prometheus-corporate-runtime",
       "integration_id": 15368,
       "workflow": ".github/workflows/validate-codestra-corporate-runtime-v1.yml"
     },
@@ -23,6 +23,11 @@
       "context": "deploy-readiness / deploy-readiness / overlay-secret-scan",
       "integration_id": 15368,
       "workflow": ".github/workflows/codestra-deploy-readiness.yml"
+    },
+    {
+      "context": "codestra/prometheus-observability",
+      "integration_id": 15368,
+      "workflow": ".github/workflows/codestra-observability.yml"
     }
   ],
   "replaces_contexts": [

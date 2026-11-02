@@ -2,11 +2,6 @@ name: Validate Codestra Prometheus corporate authority
 
 on:
   pull_request:
-    paths:
-      - "codestra/**"
-      - ".github/workflows/codestra-observability.yml"
-      - "upstream/go.mod"
-      - "upstream/go.sum"
   push:
     branches: [development, test, staging, production, main]
     paths:
@@ -106,3 +101,20 @@ jobs:
       - name: Confirm source-only safety state
         run: |
           test "$(python -c 'import json; print(json.load(open("codestra/enterprise-profile.v1.json"))["status"])')" = "CONFIG_PREPARED_NOT_DEPLOYED"
+
+  observability-source-gate:
+    name: codestra/prometheus-observability
+    if: always()
+    needs: [validate]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    permissions:
+      contents: read
+    steps:
+      - name: Require every source validation job to succeed
+        env:
+          RESULT_0: ${{ needs.validate.result }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$RESULT_0" = success

@@ -104,3 +104,20 @@ jobs:
               assert forbidden not in alerts_text
           assert "broker_signing" not in (recording_text + alerts_text).lower()
           print("Codestra Prometheus corporate runtime validation PASS")
+
+  corporate-source-gate:
+    name: codestra/prometheus-corporate-runtime
+    if: always()
+    needs: [validate]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    permissions:
+      contents: read
+    steps:
+      - name: Require every source validation job to succeed
+        env:
+          RESULT_0: ${{ needs.validate.result }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$RESULT_0" = success
