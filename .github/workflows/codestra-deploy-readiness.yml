@@ -28,7 +28,7 @@ permissions:
 
 jobs:
   deploy-readiness:
-    uses: ingtrader21-spec/Infustruction-repo/.github/workflows/reusable-codestra-upstream-deploy-readiness.yml@92f731039333846ef067f1ddbcb276463a92d9ba
+    uses: appolon1908/Infustruction-repo/.github/workflows/reusable-codestra-upstream-deploy-readiness.yml@92f731039333846ef067f1ddbcb276463a92d9ba
     with:
       repository_class: observability-overlay
       runtime_deployable: true
